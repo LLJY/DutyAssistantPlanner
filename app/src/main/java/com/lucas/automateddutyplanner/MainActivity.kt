@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -73,6 +75,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -202,13 +206,12 @@ fun HomeScreen(fm: FragmentManager, viewModel: MainViewModel) {
         mutableStateOf(0)
     }
 
-    // force a recompose for every collect
+     //force a recompose for every collect
     coroutineScope.launch {
         viewModel.dutyAssistantList.collect{
             recomposeToggleState.value = !recomposeToggleState.value
         }
     }
-    LaunchedEffect(recomposeToggleState.value) {}
     Column {
         Box(
             modifier = Modifier
@@ -324,6 +327,7 @@ fun HomeScreen(fm: FragmentManager, viewModel: MainViewModel) {
         Text(text = "Duty Personnel List", modifier = Modifier.padding(start = 24.dp ,12.dp), fontWeight = FontWeight.Bold)
         val formatter = DateTimeFormatter.ofPattern("dd")
         if(daList.value.isNotEmpty()) {
+            LaunchedEffect(recomposeToggleState.value) {}
             LazyColumn(modifier = Modifier
                 .fillMaxHeight()
                 .padding(bottom = 86.dp)) {
@@ -604,7 +608,22 @@ fun AddDutyAssistantDialog(coroutineScope: CoroutineScope,viewModel: MainViewMod
                     TextField(modifier= Modifier
                         .padding(top = 80.dp, start = 16.dp, end = 16.dp)
                         .fillMaxWidth(),
-                        value = name, onValueChange = { name = it}, placeholder = {Text("Name")})
+                        value = name,
+                        onValueChange = {
+                            name = it
+                      },
+                        placeholder = {Text("Name")},
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = {
+                            coroutineScope.launch {
+                                // save changes to the DA
+                                viewModel.addDaToList(DutyAssistant(name))
+                            }
+                        })
+                    )
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton( modifier = Modifier.padding(end = 16.dp), onClick = {
