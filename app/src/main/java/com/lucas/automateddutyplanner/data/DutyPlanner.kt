@@ -1,5 +1,6 @@
 package com.lucas.automateddutyplanner.data
 
+import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlin.math.abs
 
@@ -20,13 +21,13 @@ fun dutyPlanningMethodByDate(daS: List<DutyAssistant>, daysOfMonth: List<LocalDa
             it
         }
     }
-    var noWeekends: Int = 0
-    var noWeekdays: Int = 0
+    val noWeekends: Int =
+        daysOfMonth.count { it.dayOfWeek == kotlinx.datetime.DayOfWeek.SATURDAY || it.dayOfWeek == kotlinx.datetime.DayOfWeek.SUNDAY }
+    val noWeekdays: Int = daysOfMonth.count() - noWeekends
     for (day in daysOfMonth){
         println(day)
         val isWeekend = day.dayOfWeek == kotlinx.datetime.DayOfWeek.SATURDAY || day.dayOfWeek == kotlinx.datetime.DayOfWeek.SUNDAY
         dutyAssistants = if(isWeekend){
-            noWeekends ++
             // weekend set priorities
             dutyAssistants.map {
                 if(it.constraints.contains(Constraint.EXCUSE_STAY_IN) || it.constraints.contains(Constraint.PREFER_WEEKEND)){
@@ -48,7 +49,6 @@ fun dutyPlanningMethodByDate(daS: List<DutyAssistant>, daysOfMonth: List<LocalDa
                 it
             }
         }else{
-            noWeekdays++
             // weekday
             dutyAssistants.map{
                 if(it.constraints.contains(Constraint.PREFER_WEEKDAY)){
@@ -119,26 +119,29 @@ fun dutyPlanningMethodByDate(daS: List<DutyAssistant>, daysOfMonth: List<LocalDa
                 }
             }
 
-            // reset the priorities
-            dutyAssistants = dutyAssistants.map {
-                if (it.isTouched) {
-                    it.priority -= 1
-                    it.isTouched = false
-                }
-                if (isReserve) {
-                    it.priority = it.persistentPriority
-                } else if (writePersistentPriority) {
-                    // re scale the priorities to ensure no increasingly negative values
-                    val avgDutiesAMonth = (((noWeekends * 2) + noWeekdays) / daS.count())
-                    it.priority += avgDutiesAMonth * priorityDecreaseOnAssign
-                    it.persistentPriority = it.priority
-                }
-                it
-            }
-
         }catch (e: Exception){
             println("error: $e")
         }
     }
-    return dutyAssistants
+
+    // reset the priorities
+    dutyAssistants = dutyAssistants.map {
+        if (it.isTouched) {
+            it.priority -= 1
+            it.isTouched = false
+        }
+        if (isReserve) {
+            it.priority = it.tempPriority
+        } else {
+            // re scale the priorities to ensure no increasingly negative values
+            val avgDutiesAMonth = (((noWeekends * 2) + noWeekdays) / daS.count())
+            // tempPriority stores the priority for the current month, the algorithm will ignore this, but only write to it
+            // this ensures that it will always plan based on the previous month's priority values.
+            it.priority += avgDutiesAMonth * priorityDecreaseOnAssign
+            it.tempPriority = it.priority
+        }
+        it
+    }
+
+    return dutyAssistants.sortedBy { it.name }
 }
