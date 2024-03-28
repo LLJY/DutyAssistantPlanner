@@ -20,10 +20,13 @@ fun dutyPlanningMethodByDate(daS: List<DutyAssistant>, daysOfMonth: List<LocalDa
             it
         }
     }
+    var noWeekends: Int = 0
+    var noWeekdays: Int = 0
     for (day in daysOfMonth){
         println(day)
         val isWeekend = day.dayOfWeek == kotlinx.datetime.DayOfWeek.SATURDAY || day.dayOfWeek == kotlinx.datetime.DayOfWeek.SUNDAY
         dutyAssistants = if(isWeekend){
+            noWeekends ++
             // weekend set priorities
             dutyAssistants.map {
                 if(it.constraints.contains(Constraint.EXCUSE_STAY_IN) || it.constraints.contains(Constraint.PREFER_WEEKEND)){
@@ -45,6 +48,7 @@ fun dutyPlanningMethodByDate(daS: List<DutyAssistant>, daysOfMonth: List<LocalDa
                 it
             }
         }else{
+            noWeekdays++
             // weekday
             dutyAssistants.map{
                 if(it.constraints.contains(Constraint.PREFER_WEEKDAY)){
@@ -91,6 +95,8 @@ fun dutyPlanningMethodByDate(daS: List<DutyAssistant>, daysOfMonth: List<LocalDa
                 if(dutyGuyIdx != -1) {
                     if (dutyAssistants[dutyGuyIdx].constraints.contains(Constraint.EXCUSE_STAY_IN)) {
                         dutyAssistants[dutyGuyIdx].assignedDates.add(day)
+                        dutyAssistants[dutyGuyIdx].priority -= priorityDecreaseOnAssign
+
                         val second =
                             dutyAssistants.find { Constraint.EXCUSE_STAY_IN !in it.constraints &&  (it.assignedDates.isEmpty() || abs(day.toEpochDays() - it.assignedDates.last().toEpochDays()) > 1) && day !in it.unableDates }
                         val pmGuyIdx = dutyAssistants.indexOf(second)
@@ -99,7 +105,8 @@ fun dutyPlanningMethodByDate(daS: List<DutyAssistant>, daysOfMonth: List<LocalDa
 
                     } else {
                         dutyAssistants[dutyGuyIdx].assignedDates.add(day)
-                        dutyAssistants[dutyGuyIdx].priority -= priorityDecreaseOnAssign
+                        // weekend duties are equivalent to 2 week day duties
+                        dutyAssistants[dutyGuyIdx].priority -= priorityDecreaseOnAssign * 2
                     }
                 }
             } else {
@@ -114,24 +121,21 @@ fun dutyPlanningMethodByDate(daS: List<DutyAssistant>, daysOfMonth: List<LocalDa
 
             // reset the priorities
             dutyAssistants = dutyAssistants.map {
-                if(it.isTouched){
+                if (it.isTouched) {
                     it.priority -= 1
                     it.isTouched = false
                 }
-            if(isReserve){
-                dutyAssistants = dutyAssistants.map {
+                if (isReserve) {
                     it.priority = it.persistentPriority
-                    it
+                } else if (writePersistentPriority) {
+                    // re scale the priorities to ensure no increasingly negative values
+                    val avgDutiesAMonth = (((noWeekends * 2) + noWeekdays) / daS.count())
+                    it.priority += avgDutiesAMonth * priorityDecreaseOnAssign
+                    it.persistentPriority = it.priority
                 }
-            }else{
-                if(writePersistentPriority) {
-                    dutyAssistants = dutyAssistants.map {
-                        it.persistentPriority = it.priority
-                        it
-                    }
-                }
+                it
             }
-            it}
+
         }catch (e: Exception){
             println("error: $e")
         }
