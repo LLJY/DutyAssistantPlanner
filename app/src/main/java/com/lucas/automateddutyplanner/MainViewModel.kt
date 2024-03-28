@@ -64,10 +64,7 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
         // reset all values
         selectedMonth = month
         _dutyAssistants = _dutyAssistants.map {
-            it.unableDates = mutableListOf()
-            it.assignedDates = mutableListOf()
-            it.assignedReserve = mutableListOf()
-            it.priority = 10
+            it.changeMonths()
             it
         }.toMutableList()
         _dutyPlannedList = listOf()
