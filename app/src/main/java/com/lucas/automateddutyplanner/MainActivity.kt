@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -739,6 +740,7 @@ fun ResultsPage(context: Context, viewModel: MainViewModel){
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DaAssignedDutyCard(formatter: DateTimeFormatter, assigneeNames :Pair<String, String?>, reserveName: String?, assigned: LocalDate , modifier: Modifier = Modifier){
     Card(modifier = modifier
@@ -747,23 +749,21 @@ fun DaAssignedDutyCard(formatter: DateTimeFormatter, assigneeNames :Pair<String,
         .padding(start = 24.dp, end = 24.dp, top = 8.dp)){
 
             Row (modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween){
-                Column {
+                Column(modifier.weight(1f)) {
                     Text(modifier= Modifier.padding(start = 8.dp), text = formatter.format(assigned.toJavaLocalDate()), fontWeight = FontWeight.Bold)
                     Row(modifier = Modifier
                         .wrapContentSize()
                         .padding(start = 8.dp)){
-                        Text(modifier= Modifier.padding(end = 8.dp), text = assigneeNames.first, fontWeight = FontWeight.SemiBold)
-                        if(assigneeNames.second != null){
-                            Text(text = "/ ${assigneeNames.second} (PM)", fontWeight = FontWeight.SemiBold)
-                        }
+                        val text = if(assigneeNames.second != null) "${assigneeNames.first} / ${assigneeNames.second} (PM)" else assigneeNames.first
+                        Text(modifier= Modifier.padding(end = 8.dp).basicMarquee(), text = text, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 if(reserveName != null) {
                     Text(
-                        modifier = Modifier.padding(end = 8.dp),
-                        text = "Reserve: ${reserveName}",
-                        textAlign = TextAlign.Start,
-                        fontWeight = FontWeight.SemiBold
+                        modifier = Modifier.padding(end = 8.dp).weight(1f).basicMarquee(),
+                        text = "R: $reserveName",
+                        textAlign = TextAlign.End,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }else{
                     Box{}
