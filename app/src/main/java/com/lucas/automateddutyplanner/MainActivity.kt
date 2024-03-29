@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -110,6 +111,7 @@ import me.zhanghai.compose.preference.SwitchPreference
 import me.zhanghai.compose.preference.basicPreference
 import me.zhanghai.compose.preference.switchPreference
 import java.io.File
+import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
 
 @AndroidEntryPoint
@@ -682,14 +684,45 @@ fun ResultsPage(context: Context, viewModel: MainViewModel){
             LazyColumn(modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 8.dp, bottom = 86.dp),) {
-                items(dutyResults.value.size) {
-                    DaAssignedDutyCard(
-                        formatter = formatter,
-                        name = dutyResults.value[it].first,
-                        assigned = dutyResults.value[it].second,
-                        viewModel = viewModel
-                    )
+                var i = 0
+                while( i <dutyResults.value.size){
+                    val assigned = mutableListOf<String?>()
+                    val dutyResult = dutyResults.value[i]
+                    assigned.add(dutyResult.first)
+
+                    if(dutyResult.second.dayOfWeek == DayOfWeek.SUNDAY || dutyResult.second.dayOfWeek  == DayOfWeek.SATURDAY) {
+                        val dutyDateAssignees =
+                            dutyResults.value.filter { assignee -> assignee.second == dutyResult.second }
+                        if (dutyDateAssignees.count() > 1) {
+                            assigned.add(dutyDateAssignees.first { assignee -> assignee.first != dutyResult.first}.first)
+                            i++
+                            assigned.sortByDescending { it?.contains("(AM)") }
+
+                        }else{
+                            assigned.add(null)
+                        }
+                    }else{
+                        assigned.add(null)
+                    }
+                    val reserve = if(viewModel.dutyReserveList.isNotEmpty()) {
+
+                            viewModel.dutyReserveList.first { reservee -> reservee.second == dutyResult.second }.first
+                    }else{
+                        null
+                    }
+                    item{
+                        DaAssignedDutyCard(
+                            formatter = formatter,
+                            assigned = dutyResult.second,
+                            assigneeNames = Pair<String, String?>(assigned[0]!!, assigned[1]),
+                            reserveName = reserve)
+                    }
+                    i++
                 }
+                items(dutyResults.value.size) {
+
+                }
+                // spacer from the bottom
                 item {
                     Box (Modifier.height(84.dp)){
 
@@ -707,14 +740,34 @@ fun ResultsPage(context: Context, viewModel: MainViewModel){
 }
 
 @Composable
-fun DaAssignedDutyCard(formatter: DateTimeFormatter, name: String, assigned: LocalDate, viewModel: MainViewModel, modifier: Modifier = Modifier){
+fun DaAssignedDutyCard(formatter: DateTimeFormatter, assigneeNames :Pair<String, String?>, reserveName: String?, assigned: LocalDate , modifier: Modifier = Modifier){
     Card(modifier = modifier
         .wrapContentSize()
-        .height(44.dp)
+        .height(76.dp)
         .padding(start = 24.dp, end = 24.dp, top = 8.dp)){
+
             Row (modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween){
-                Text(modifier= Modifier.padding(start = 8.dp), text = formatter.format(assigned.toJavaLocalDate()), fontWeight = FontWeight.SemiBold)
-                Text(modifier= Modifier.padding(end = 8.dp), text = name, fontWeight = FontWeight.SemiBold)
+                Column {
+                    Text(modifier= Modifier.padding(start = 8.dp), text = formatter.format(assigned.toJavaLocalDate()), fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier
+                        .wrapContentSize()
+                        .padding(start = 8.dp)){
+                        Text(modifier= Modifier.padding(end = 8.dp), text = assigneeNames.first, fontWeight = FontWeight.SemiBold)
+                        if(assigneeNames.second != null){
+                            Text(text = "/ ${assigneeNames.second} (PM)", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+                if(reserveName != null) {
+                    Text(
+                        modifier = Modifier.padding(end = 8.dp),
+                        text = "Reserve: ${reserveName}",
+                        textAlign = TextAlign.Start,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }else{
+                    Box{}
+                }
             }
     }
 }
@@ -745,7 +798,7 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel){
                         }
                     },
                     title = { Text(text = "Enable Reserve Planning") },
-                    summary = {Text(text = "Reserve planning will be transparent to you, and will only show up in the exported CSV file.")})
+                    summary = {Text(text = "Reserve planning will show up in both the Results screen and the exported CSV")})
             }
 
             
