@@ -720,9 +720,6 @@ fun ResultsPage(context: Context, viewModel: MainViewModel){
                     }
                     i++
                 }
-                items(dutyResults.value.size) {
-
-                }
                 // spacer from the bottom
                 item {
                     Box (Modifier.height(84.dp)){
@@ -755,12 +752,17 @@ fun DaAssignedDutyCard(formatter: DateTimeFormatter, assigneeNames :Pair<String,
                         .wrapContentSize()
                         .padding(start = 8.dp)){
                         val text = if(assigneeNames.second != null) "${assigneeNames.first} / ${assigneeNames.second} (PM)" else assigneeNames.first
-                        Text(modifier= Modifier.padding(end = 8.dp).basicMarquee(), text = text, fontWeight = FontWeight.SemiBold)
+                        Text(modifier= Modifier
+                            .padding(end = 8.dp)
+                            .basicMarquee(), text = text, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 if(reserveName != null) {
                     Text(
-                        modifier = Modifier.padding(end = 8.dp).weight(1f).basicMarquee(),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .weight(1f)
+                            .basicMarquee(),
                         text = "R: $reserveName",
                         textAlign = TextAlign.End,
                         fontWeight = FontWeight.SemiBold,
