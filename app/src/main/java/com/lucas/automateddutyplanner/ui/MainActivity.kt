@@ -537,16 +537,16 @@ fun DAItemCard(
             }
             // emulate an icon button using a box, so we can make use of longclick
             Row(
-                horizontalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxHeight()
-                    .weight(0.6f)
+                    .weight(0.6f),
             ) {
                 // set unable dates
                 Box(modifier = Modifier
                     .clip(CircleShape)
-                    .size(42.dp)
+                    .size(48.dp)
                     .combinedClickable(onClick = {
                         selectDateUnit()
                     }, onLongClick = {
