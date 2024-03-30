@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -287,7 +288,7 @@ fun HomeScreen(fm: FragmentManager, viewModel: MainViewModel) {
 
             }
         }
-        Text(text = "Duty Personnel List", modifier = Modifier.padding(start = 24.dp ,12.dp), fontWeight = FontWeight.Bold)
+        Text(text = "Duty Personnel List", modifier = Modifier.padding(start = 8.dp ,8.dp), fontWeight = FontWeight.Bold)
         val formatter = DateTimeFormatter.ofPattern("dd")
         if(daList.value.isNotEmpty()) {
             LaunchedEffect(recomposeToggleState.value) {}
@@ -385,7 +386,7 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
     Card(modifier = modifier
         .wrapContentSize()
         .height(76.dp)
-        .padding(start = 24.dp, end = 24.dp, top = 8.dp)
+        .padding(start = 8.dp, end = 8.dp, top = 8.dp)
         .combinedClickable(
             onLongClick = {
                 showingEditNameDialog = true
@@ -394,11 +395,11 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
 
             })) {
         Row (horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize()){
-            Column(Modifier.wrapContentSize()) {
+            Column(Modifier.fillMaxWidth().weight(1f)) {
                 // add (AM) to mark out those who cannot do duty on weekends
                 val daName = if(Constraint.EXCUSE_STAY_IN in da.constraints) da.name + " (AM)" else da.name
-                Text(text = daName, Modifier.padding(start = 8.dp), fontWeight = FontWeight.SemiBold)
-                Text(modifier = Modifier.padding(start = 8.dp),
+                Text(text = daName, Modifier.padding(start = 8.dp).basicMarquee(), fontWeight = FontWeight.SemiBold)
+                Text(modifier = Modifier.padding(start = 8.dp).basicMarquee(),
                     // avoid showing dates if there are none, or there are way too many
                     text = if(da.unableDates.isNotEmpty() && da.unableDates.count() < 10) {
                         da.unableDates.map { dateFormatter.format(it.toJavaLocalDate()) }
@@ -410,7 +411,7 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
                             "No Unavailable Dates"
                         })
             }
-            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
+            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom, modifier = Modifier.wrapContentSize().weight(0.6f)) {
                 // set unable dates
                 IconButton(onClick =
                 {
@@ -648,8 +649,8 @@ fun ResultsPage(context: Context, viewModel: MainViewModel){
             Text(text = "Planning Duty For: " +
                     "${Month(viewModel.selectedMonth)}",
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 12.dp, top = 12.dp))
-            TextButton(modifier=Modifier.padding(end = 8.dp),
+                modifier = Modifier.padding(start = 12.dp, top = 20.dp))
+            TextButton(modifier=Modifier.padding(end = 8.dp, top = 12.dp).height(32.dp),
                 onClick = {
                     coroutineScope.launch(Dispatchers.IO) {
                         val isReserve = viewModel.sharedPrefs.getBoolean("enable_reserve", false)
@@ -705,7 +706,7 @@ fun DaAssignedDutyCard(formatter: DateTimeFormatter, assigneeNames :Pair<String,
     Card(modifier = modifier
         .wrapContentSize()
         .height(76.dp)
-        .padding(start = 24.dp, end = 24.dp, top = 8.dp)){
+        .padding(start = 8.dp, end = 8.dp, top = 8.dp)){
 
             Row (modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween){
                 Column(modifier.weight(1f)) {
