@@ -1,9 +1,8 @@
-package com.lucas.automateddutyplanner
+package com.lucas.automateddutyplanner.ui
 
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lucas.automateddutyplanner.data.Constraint

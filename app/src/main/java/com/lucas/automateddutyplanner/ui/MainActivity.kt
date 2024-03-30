@@ -1,4 +1,4 @@
-package com.lucas.automateddutyplanner
+package com.lucas.automateddutyplanner.ui
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -8,7 +8,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.DocumentsContract
-import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -27,7 +26,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -45,7 +43,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
@@ -84,7 +81,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
-import androidx.core.net.toFile
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -96,6 +92,8 @@ import androidx.navigation.compose.rememberNavController
 import com.aminography.primecalendar.civil.CivilCalendar
 import com.aminography.primedatepicker.picker.PrimeDatePicker
 import com.aminography.primedatepicker.picker.callback.MultipleDaysPickCallback
+import com.lucas.automateddutyplanner.BottomNavItemList
+import com.lucas.automateddutyplanner.R
 import com.lucas.automateddutyplanner.data.Constraint
 import com.lucas.automateddutyplanner.data.DutyAssistant
 import com.lucas.automateddutyplanner.ui.theme.AutomatedDutyPlannerTheme
@@ -109,8 +107,6 @@ import kotlinx.datetime.toJavaLocalDate
 import me.zhanghai.compose.preference.Preference
 import me.zhanghai.compose.preference.ProvidePreferenceLocals
 import me.zhanghai.compose.preference.SwitchPreference
-import me.zhanghai.compose.preference.basicPreference
-import me.zhanghai.compose.preference.switchPreference
 import java.io.File
 import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
@@ -157,7 +153,7 @@ class MainActivity : AppCompatActivity() {
         requestCode: Int, resultCode: Int, resultData: Intent?) {
         super.onActivityResult(requestCode, resultCode, resultData)
         when(requestCode){
-            PICK_FILE->{
+            PICK_FILE ->{
                 // file uri
                 lifecycleScope.launch(Dispatchers.IO) {
                     resultData?.data?.let {
@@ -168,7 +164,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            CREATE_FILE->{
+            CREATE_FILE ->{
                 // file uri
                 lifecycleScope.launch (Dispatchers.IO){
                     resultData?.data?.let {
@@ -540,7 +536,7 @@ fun DutyConstraintsDialog(index: Int, dutyAssistant: DutyAssistant, coroutineSco
 }
 
 @Composable
-fun AddDutyAssistantDialog(coroutineScope: CoroutineScope,viewModel: MainViewModel, onDismissed: () -> Unit){
+fun AddDutyAssistantDialog(coroutineScope: CoroutineScope, viewModel: MainViewModel, onDismissed: () -> Unit){
     var name by rememberSaveable {
         mutableStateOf("")
     }
