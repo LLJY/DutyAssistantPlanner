@@ -3,6 +3,11 @@ package com.lucas.automateddutyplanner.ui
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lucas.automateddutyplanner.data.Constraint
@@ -25,6 +30,7 @@ import java.io.FileWriter
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
+import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
@@ -38,7 +44,7 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
     val selectedYear = java.time.LocalDate.now().year
     var selectedMonth = 0
 
-    private val _dutyPlannedResults: MutableStateFlow<List<Pair<String, LocalDate>>> = MutableStateFlow(listOf())
+    private val _dutyPlannedResults: MutableStateFlow<List<DutyResult>> = MutableStateFlow(listOf())
     private var _dutyPlannedList: List<Pair<String, LocalDate>> = listOf()
     val dutyPlannedResults = _dutyPlannedResults.asStateFlow()
 
@@ -69,7 +75,7 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
         _dutyPlannedList = listOf()
         dutyReserveList = listOf()
         _dutyAssistantList.emit(_dutyAssistants)
-        _dutyPlannedResults.emit(_dutyPlannedList)
+        _dutyPlannedResults.emit(displayDutyPersonnel())
         saveModifiedList()
         savePlannedDuty()
     }
@@ -93,7 +99,7 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
             dutyReserveList = Json.decodeFromString(reserveRawStr)
         dutyReserveList = dutyReserveList.sortedBy { it.second }
 
-        _dutyPlannedResults.emit(_dutyPlannedList)
+        _dutyPlannedResults.emit(displayDutyPersonnel())
     }
 
     private suspend fun savePlannedDuty() = withContext(Dispatchers.IO){
@@ -145,7 +151,7 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
         }
         _dutyPlannedList = returnList.toList()
         _dutyPlannedList = _dutyPlannedList.sortedBy { it.second }
-        _dutyPlannedResults.emit(_dutyPlannedList)
+        _dutyPlannedResults.emit(displayDutyPersonnel())
         if(isReserve){
             planReserve()
         }
@@ -162,6 +168,49 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
         }
         dutyReserveList = dutyReserveList.sortedBy { it.second }
         dutyReserveList = returnList
+    }
+
+    private fun displayDutyPersonnel(): List<DutyResult> {
+        val returnList: MutableList<DutyResult> = mutableListOf()
+
+        if (_dutyPlannedList.isNotEmpty()) {
+            var i = 0
+            while (i < _dutyPlannedList.size) {
+                val assigned = mutableListOf<String?>()
+                val dutyResult = _dutyPlannedList[i]
+                assigned.add(dutyResult.first)
+
+                if (dutyResult.second.dayOfWeek == DayOfWeek.SUNDAY || dutyResult.second.dayOfWeek == DayOfWeek.SATURDAY) {
+                    val dutyDateAssignees =
+                        _dutyPlannedList.filter { assignee -> assignee.second == dutyResult.second }
+                    if (dutyDateAssignees.count() > 1) {
+                        assigned.add(dutyDateAssignees.first { assignee -> assignee.first != dutyResult.first }.first)
+                        i++
+                        assigned.sortByDescending { it?.contains("(AM)") }
+
+                    } else {
+                        assigned.add(null)
+                    }
+                } else {
+                    assigned.add(null)
+                }
+                val reserve = if (dutyReserveList.isNotEmpty()) {
+
+                    dutyReserveList.first { reservee -> reservee.second == dutyResult.second }.first
+                } else {
+                    null
+                }
+                returnList.add(
+                    DutyResult(
+                        assigneeNames = Pair<String, String?>(assigned[0]!!, assigned[1]),
+                        reserveName = reserve,
+                        assigned = dutyResult.second
+                    )
+                )
+                i++
+            }
+        }
+        return returnList
     }
 
     suspend fun createCsvFromDuty(directory: File, reserve: Boolean): File = withContext(Dispatchers.IO){

@@ -596,7 +596,7 @@ fun AddDutyAssistantDialog(coroutineScope: CoroutineScope, viewModel: MainViewMo
 
 @Composable
 fun ResultsPage(context: Context, viewModel: MainViewModel){
-    val dutyResults = viewModel.dutyPlannedResults.collectAsStateWithLifecycle()
+    val dutyResults by viewModel.dutyPlannedResults.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     Column {
         Row (modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween){
@@ -630,51 +630,18 @@ fun ResultsPage(context: Context, viewModel: MainViewModel){
                 }
             }
         }
-        if(dutyResults.value.isNotEmpty()) {
+        if(dutyResults.isNotEmpty()) {
             val formatter = DateTimeFormatter.ofPattern("EEEE, dd/MM")
             LazyColumn(modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 8.dp, bottom = 86.dp),) {
-                var i = 0
-                while( i <dutyResults.value.size){
-                    val assigned = mutableListOf<String?>()
-                    val dutyResult = dutyResults.value[i]
-                    assigned.add(dutyResult.first)
-
-                    if(dutyResult.second.dayOfWeek == DayOfWeek.SUNDAY || dutyResult.second.dayOfWeek  == DayOfWeek.SATURDAY) {
-                        val dutyDateAssignees =
-                            dutyResults.value.filter { assignee -> assignee.second == dutyResult.second }
-                        if (dutyDateAssignees.count() > 1) {
-                            assigned.add(dutyDateAssignees.first { assignee -> assignee.first != dutyResult.first}.first)
-                            i++
-                            assigned.sortByDescending { it?.contains("(AM)") }
-
-                        }else{
-                            assigned.add(null)
-                        }
-                    }else{
-                        assigned.add(null)
-                    }
-                    val reserve = if(viewModel.dutyReserveList.isNotEmpty()) {
-
-                            viewModel.dutyReserveList.first { reservee -> reservee.second == dutyResult.second }.first
-                    }else{
-                        null
-                    }
-                    item{
-                        DaAssignedDutyCard(
-                            formatter = formatter,
-                            assigned = dutyResult.second,
-                            assigneeNames = Pair<String, String?>(assigned[0]!!, assigned[1]),
-                            reserveName = reserve)
-                    }
-                    i++
-                }
-                // spacer from the bottom
-                item {
-                    Box (Modifier.height(84.dp)){
-
-                    }
+                items(dutyResults.size){
+                    DaAssignedDutyCard(
+                        formatter = formatter,
+                        assigneeNames = dutyResults[it].assigneeNames,
+                        reserveName = dutyResults[it].reserveName,
+                        assigned = dutyResults[it].assigned,
+                    )
                 }
             }
         }else{
