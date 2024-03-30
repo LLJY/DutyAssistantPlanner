@@ -271,6 +271,12 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
         }
     }
 
+    suspend fun editDaName(index: Int, name: String){
+        _dutyAssistants[index].name = name
+        saveModifiedList()
+        _dutyAssistantList.emit(_dutyAssistants)
+    }
+
     suspend fun importJsonToDaConfig(inputStream: InputStream): Boolean = withContext(Dispatchers.IO){
         try {
             val rawStr = inputStream.bufferedReader().use { it.readText() }

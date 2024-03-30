@@ -21,7 +21,7 @@ enum class Constraint
 }
 
 @Serializable
-data class DutyAssistant(val name: String, var constraints: MutableList<Constraint> = mutableListOf(), var unableDates: MutableList<LocalDate> = mutableListOf(), var assignedDates: MutableList<LocalDate> = mutableListOf(), var assignedReserve: MutableList<LocalDate> = mutableListOf(), var priority: Int = 10, var isTouched: Boolean = false, var persistentPriority: Int = 10, var tempPriority: Int = 10){
+data class DutyAssistant(var name: String, var constraints: MutableList<Constraint> = mutableListOf(), var unableDates: MutableList<LocalDate> = mutableListOf(), var assignedDates: MutableList<LocalDate> = mutableListOf(), var assignedReserve: MutableList<LocalDate> = mutableListOf(), var priority: Int = 10, var isTouched: Boolean = false, var persistentPriority: Int = 10, var tempPriority: Int = 10){
     fun changeMonths(){
         // swap over the priorities such that it apply the modified priorities from this month
         this.persistentPriority = this.tempPriority

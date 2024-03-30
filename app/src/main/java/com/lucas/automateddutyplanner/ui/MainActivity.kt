@@ -144,7 +144,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 if(showingAddDialog){
-                    AddDutyAssistantDialog(coroutineScope = coroutineScope, viewModel) {
+                    AddEditDutyAssistantDialog(coroutineScope = coroutineScope, viewModel) {
                         showingAddDialog = false
                     }
                 }
@@ -379,13 +379,16 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
     var showingDeletionConfirmationDialog by remember {
         mutableStateOf(false)
     }
+    var showingEditNameDialog by remember {
+        mutableStateOf(false)
+    }
     Card(modifier = modifier
         .wrapContentSize()
         .height(76.dp)
         .padding(start = 24.dp, end = 24.dp, top = 8.dp)
         .combinedClickable(
             onLongClick = {
-                // TODO
+                showingEditNameDialog = true
             },
             onClick = {
 
@@ -487,10 +490,21 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
                     showingDeletionConfirmationDialog = false
                 })
         }
-        if(showingConstraintsDialog)
-            DutyConstraintsDialog(index = index, dutyAssistant = da, coroutineScope = coroutineScope, viewModel = viewModel, onDismissed = {
-                showingConstraintsDialog = false
-            })
+        if(showingConstraintsDialog) {
+            DutyConstraintsDialog(
+                index = index,
+                dutyAssistant = da,
+                coroutineScope = coroutineScope,
+                viewModel = viewModel,
+                onDismissed = {
+                    showingConstraintsDialog = false
+                })
+        }
+        if(showingEditNameDialog){
+            AddEditDutyAssistantDialog(coroutineScope = coroutineScope, viewModel =viewModel, index = index ) {
+                showingEditNameDialog = false
+            }
+        }
     }
 }
 
@@ -561,9 +575,9 @@ fun DutyConstraintsDialog(index: Int, dutyAssistant: DutyAssistant, coroutineSco
 }
 
 @Composable
-fun AddDutyAssistantDialog(coroutineScope: CoroutineScope, viewModel: MainViewModel, onDismissed: () -> Unit){
+fun AddEditDutyAssistantDialog(coroutineScope: CoroutineScope, viewModel: MainViewModel, index: Int? = null, onDismissed: () -> Unit){
     var name by rememberSaveable {
-        mutableStateOf("")
+        mutableStateOf(if(index != null) viewModel.dutyAssistantList.value[index].name else "")
     }
     Dialog(onDismissRequest = {
         onDismissed()
@@ -571,17 +585,17 @@ fun AddDutyAssistantDialog(coroutineScope: CoroutineScope, viewModel: MainViewMo
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(320.dp)
+                .wrapContentHeight()
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
         ) {
-            Text(modifier = Modifier.padding(top = 16.dp, start = 16.dp), text = "Add Duty Personnel", fontWeight = FontWeight.Bold)
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+            Text(modifier = Modifier.padding(top = 16.dp, start = 16.dp), text = if(index != null) "Edit Duty Personnel" else "Add Duty Personnel", fontWeight = FontWeight.Bold)
+            Column(Modifier.wrapContentSize(), verticalArrangement = Arrangement.SpaceAround) {
                 Box(modifier = Modifier
-                    .height(200.dp)
+                    .height(160.dp)
                     .fillMaxWidth()) {
                     TextField(modifier= Modifier
-                        .padding(top = 80.dp, start = 16.dp, end = 16.dp)
+                        .padding(top = 48.dp, start = 16.dp, end = 16.dp)
                         .fillMaxWidth(),
                         value = name,
                         onValueChange = {
@@ -604,10 +618,19 @@ fun AddDutyAssistantDialog(coroutineScope: CoroutineScope, viewModel: MainViewMo
                     TextButton( modifier = Modifier.padding(end = 16.dp), onClick = {
                         coroutineScope.launch {
                             // save changes to the DA
-                            viewModel.addDaToList(DutyAssistant(name))
+                            if(index == null) {
+                                viewModel.addDaToList(DutyAssistant(name))
+                            }else{
+                                viewModel.editDaName(index, name)
+                            }
+                            onDismissed()
                         }
                     }) {
-                        Text("Add")
+                        if(index == null) {
+                            Text("Add")
+                        }else{
+                            Text("Save")
+                        }
                     }
                 }
             }
