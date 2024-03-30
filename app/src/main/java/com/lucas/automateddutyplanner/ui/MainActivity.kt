@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -75,6 +76,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -411,38 +413,46 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
                             "No Unavailable Dates"
                         })
             }
-            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom, modifier = Modifier.wrapContentSize().weight(0.6f)) {
+            val selectDateUnit = {
+                val callback = MultipleDaysPickCallback { days ->
+                    da.unableDates = days.map { LocalDate(it.year, it.month+1, it.dayOfMonth) }.toMutableList()
+                    coroutineScope.launch {
+                        viewModel.modifyDutyAssistant(da, index)
+                    }
+                }
+                val startDate = CivilCalendar().apply {
+                    date = 1
+                    month = viewModel.selectedMonth
+                    year = viewModel.selectedYear
+                }
+                val endDate = CivilCalendar().apply {
+                    date =  LocalDate(viewModel.selectedYear, viewModel.selectedMonth, 1).month.length((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))
+                    month = viewModel.selectedMonth -1
+                    year = viewModel.selectedYear
+                }
+                startDate.set(year = viewModel.selectedYear, month = viewModel.selectedMonth-1, dayOfMonth = 1)
+                val datePicker = PrimeDatePicker.bottomSheetWith(startDate)
+                    .pickMultipleDays(callback)
+                    .initiallyPickedMultipleDays(da.unableDates.map {
+                        val cc = CivilCalendar()
+                        cc.set(year = it.year, month = it.monthNumber-1, dayOfMonth = it.dayOfMonth)
+                        cc
+                    })
+                    .maxPossibleDate(endDate)
+                    .minPossibleDate(startDate)// or pickRangeDays(callback) or pickMultipleDays(callback
+                datePicker.build().show(fm, "sometag")
+            }
+            // emulate an icon button using a box, so we can make use of longclick
+            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxHeight().weight(0.6f)) {
                 // set unable dates
-                IconButton(onClick =
-                {
-                    val callback = MultipleDaysPickCallback { days ->
-                        da.unableDates = days.map { LocalDate(it.year, it.month+1, it.dayOfMonth) }.toMutableList()
-                        coroutineScope.launch {
-                            viewModel.modifyDutyAssistant(da, index)
-                        }
+                Box(modifier= Modifier.clip(CircleShape).size(42.dp).combinedClickable(onClick = {
+                    selectDateUnit()
+                }, onLongClick = {
+                    da.unableDates = mutableListOf()
+                    coroutineScope.launch {
+                        viewModel.modifyDutyAssistant(da, index)
                     }
-                    val startDate = CivilCalendar().apply {
-                        date = 1
-                        month = viewModel.selectedMonth
-                        year = viewModel.selectedYear
-                    }
-                    val endDate = CivilCalendar().apply {
-                        date =  LocalDate(viewModel.selectedYear, viewModel.selectedMonth, 1).month.length((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))
-                        month = viewModel.selectedMonth -1
-                        year = viewModel.selectedYear
-                    }
-                    startDate.set(year = viewModel.selectedYear, month = viewModel.selectedMonth-1, dayOfMonth = 1)
-                    val datePicker = PrimeDatePicker.bottomSheetWith(startDate)
-                        .pickMultipleDays(callback)
-                        .initiallyPickedMultipleDays(da.unableDates.map {
-                            val cc = CivilCalendar()
-                            cc.set(year = it.year, month = it.monthNumber-1, dayOfMonth = it.dayOfMonth)
-                            cc
-                        })
-                        .maxPossibleDate(endDate)
-                        .minPossibleDate(startDate)// or pickRangeDays(callback) or pickMultipleDays(callback
-                    datePicker.build().show(fm, "sometag")
-                }, )
+                }), contentAlignment = Alignment.Center)
                 {
                     if(da.unableDates.isNotEmpty())
                         Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Unavailable Dates", tint = Color.Blue)
@@ -471,7 +481,6 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
                 IconButton(onClick =
                 {
                     showingDeletionConfirmationDialog = true
-
 
                 }, )
                 {
