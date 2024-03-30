@@ -5,7 +5,7 @@ import kotlinx.datetime.LocalDate
 import kotlin.math.abs
 
 
-fun dutyPlanningMethodByDate(daS: List<DutyAssistant>, daysOfMonth: List<LocalDate>, isReserve: Boolean, writePersistentPriority: Boolean = true): List<DutyAssistant>{
+fun dutyPlanningMethodByDate(daS: List<DutyAssistant>, daysOfMonth: List<LocalDate>, isReserve: Boolean, publicHolidays: List<LocalDate>): List<DutyAssistant>{
     val priorityDecreaseOnAssign = 10
     var dutyAssistants = daS
     // apply priority if not planning for reserve
@@ -25,8 +25,7 @@ fun dutyPlanningMethodByDate(daS: List<DutyAssistant>, daysOfMonth: List<LocalDa
         daysOfMonth.count { it.dayOfWeek == kotlinx.datetime.DayOfWeek.SATURDAY || it.dayOfWeek == kotlinx.datetime.DayOfWeek.SUNDAY }
     val noWeekdays: Int = daysOfMonth.count() - noWeekends
     for (day in daysOfMonth){
-        println(day)
-        val isWeekend = day.dayOfWeek == kotlinx.datetime.DayOfWeek.SATURDAY || day.dayOfWeek == kotlinx.datetime.DayOfWeek.SUNDAY
+        val isWeekend = day.dayOfWeek == kotlinx.datetime.DayOfWeek.SATURDAY || day.dayOfWeek == kotlinx.datetime.DayOfWeek.SUNDAY || day in publicHolidays
         dutyAssistants = if(isWeekend){
             // weekend set priorities
             dutyAssistants.map {

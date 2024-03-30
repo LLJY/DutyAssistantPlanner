@@ -3,11 +3,13 @@ package com.lucas.automateddutyplanner.ui
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastJoinToString
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lucas.automateddutyplanner.data.Constraint
@@ -21,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.format.DateTimeFormat
 import kotlinx.datetime.plus
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.serialization.encodeToString
@@ -44,6 +47,10 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
     val selectedYear = java.time.LocalDate.now().year
     var selectedMonth = 0
 
+    private var _publicHolidaysFlow: MutableStateFlow<List<LocalDate>> = MutableStateFlow(mutableListOf())
+    var publicHolidaysFlow = _publicHolidaysFlow.asStateFlow()
+    private var _publicHolidays: MutableList<LocalDate> = mutableListOf()
+
     private val _dutyPlannedResults: MutableStateFlow<List<DutyResult>> = MutableStateFlow(listOf())
     private var _dutyPlannedList: List<Pair<String, LocalDate>> = listOf()
     val dutyPlannedResults = _dutyPlannedResults.asStateFlow()
@@ -55,6 +62,17 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
     private suspend fun _initialiseValues(){
         sharedPrefs = getApplication<Application>().getSharedPreferences("somekeylol", Context.MODE_PRIVATE)
         selectedMonth = sharedPrefs.getInt("month", 1)
+        val publicHolsRawStr = sharedPrefs.getString("publicHolidays", "")
+        if(!publicHolsRawStr.isNullOrEmpty()) {
+            _publicHolidays = Json.decodeFromString(publicHolsRawStr)
+            if(_publicHolidays.any { it.year != selectedYear }){
+                // if we changed over to a new year, clear the public holidays list automatically
+                _publicHolidays = mutableListOf()
+                sharedPrefs.edit().putString("publicHolidays", Json.encodeToString(_publicHolidays)).apply()
+            }
+            _publicHolidays.sort()
+            _publicHolidaysFlow.emit(_publicHolidays)
+        }
         getSavedList()
         getSavedPlannedDuty()
     }
@@ -131,14 +149,14 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
         saveModifiedList()
     }
 
-    suspend fun planDuty(isReserve: Boolean = false, writePriority: Boolean = true){
+    suspend fun planDuty(isReserve: Boolean = false){
         // clear all previously assigned dates
         _dutyAssistants = _dutyAssistants.map {
             it.assignedDates = mutableListOf()
             it
         }.toMutableList()
 
-        val results = dutyPlanningMethodByDate(_dutyAssistants, getDaysInMonth(selectedYear,selectedMonth), false, writePriority)
+        val results = dutyPlanningMethodByDate(_dutyAssistants, getDaysInMonth(selectedYear,selectedMonth), false, _publicHolidays)
         _dutyAssistants = results.toMutableList()
         _dutyAssistantList.emit(_dutyAssistants)
         saveModifiedList()
@@ -159,7 +177,7 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
     }
 
     fun planReserve(){
-        val results = dutyPlanningMethodByDate(_dutyAssistants, getDaysInMonth(selectedYear,selectedMonth), true)
+        val results = dutyPlanningMethodByDate(_dutyAssistants, getDaysInMonth(selectedYear,selectedMonth),true, _publicHolidays)
         val returnList: MutableList<Pair<String, LocalDate>> = mutableListOf()
         results.forEach { da ->
             da.assignedReserve.forEach{
@@ -180,7 +198,7 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
                 val dutyResult = _dutyPlannedList[i]
                 assigned.add(dutyResult.first)
 
-                if (dutyResult.second.dayOfWeek == DayOfWeek.SUNDAY || dutyResult.second.dayOfWeek == DayOfWeek.SATURDAY) {
+                if (dutyResult.second.dayOfWeek == DayOfWeek.SUNDAY || dutyResult.second.dayOfWeek == DayOfWeek.SATURDAY || dutyResult.second in _publicHolidays) {
                     val dutyDateAssignees =
                         _dutyPlannedList.filter { assignee -> assignee.second == dutyResult.second }
                     if (dutyDateAssignees.count() > 1) {
@@ -262,6 +280,31 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
                 _dutyAssistantList.emit(_dutyAssistants)
                 saveModifiedList()
             }
+        }catch (e: Exception){
+            e.printStackTrace()
+            return@withContext false
+        }
+        return@withContext true
+    }
+    suspend fun setPublicHolidays(holidays: List<LocalDate>){
+        _publicHolidays = mutableListOf()
+        _publicHolidays = holidays.toMutableList()
+        _publicHolidays.sort()
+        _publicHolidaysFlow.emit(_publicHolidays)
+        sharedPrefs.edit().putString("publicHolidays", Json.encodeToString(holidays)).apply()
+    }
+
+    suspend fun importIcsToLocalDate(inputStream: InputStream): Boolean = withContext(Dispatchers.IO){
+        val format = LocalDate.Formats.ISO_BASIC
+        val returnList: MutableList<LocalDate> = mutableListOf()
+        try {
+            val dateLine = inputStream.bufferedReader().use { it.readLines() }.filter { it.contains("DTSTART;") }
+            dateLine.forEach {
+                val dateStr = it.substring(19)
+                returnList.add(LocalDate.parse(dateStr, format))
+            }
+            setPublicHolidays(returnList)
+            Log.e("FFFF", _publicHolidays.toString())
         }catch (e: Exception){
             e.printStackTrace()
             return@withContext false

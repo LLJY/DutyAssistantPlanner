@@ -13,7 +13,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +42,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
@@ -65,6 +65,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -107,10 +108,10 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
 import kotlinx.datetime.toJavaLocalDate
 import me.zhanghai.compose.preference.Preference
+import me.zhanghai.compose.preference.PreferenceCategory
 import me.zhanghai.compose.preference.ProvidePreferenceLocals
 import me.zhanghai.compose.preference.SwitchPreference
 import java.io.File
-import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
 
 @AndroidEntryPoint
@@ -178,6 +179,16 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
+            PICK_ICS_FILE ->{
+                lifecycleScope.launch(Dispatchers.IO) {
+                    resultData?.data?.let {
+                        val stream = contentResolver.openInputStream(it)
+                        if (stream != null) {
+                            viewModel.importIcsToLocalDate(stream)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -187,7 +198,7 @@ fun NavigationHost(activityContext: Activity, context: Context, navController: N
     NavHost(navController, startDestination = BottomNavItemList[0].route) {
         composable(BottomNavItemList[0].route) { HomeScreen(fm, viewModel) }
         composable(BottomNavItemList[1].route) { ResultsPage(context ,viewModel) }
-        composable(BottomNavItemList[2].route) { SettingsPage(activityContext, viewModel) }
+        composable(BottomNavItemList[2].route) { SettingsPage(activityContext, viewModel, fm) }
     }
 }
 
@@ -406,7 +417,16 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
                             viewModel.modifyDutyAssistant(da, index)
                         }
                     }
-                    val startDate = CivilCalendar()
+                    val startDate = CivilCalendar().apply {
+                        date = 1
+                        month = viewModel.selectedMonth
+                        year = viewModel.selectedYear
+                    }
+                    val endDate = CivilCalendar().apply {
+                        date =  LocalDate(viewModel.selectedYear, viewModel.selectedMonth, 1).month.length((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))
+                        month = viewModel.selectedMonth -1
+                        year = viewModel.selectedYear
+                    }
                     startDate.set(year = viewModel.selectedYear, month = viewModel.selectedMonth-1, dayOfMonth = 1)
                     val datePicker = PrimeDatePicker.bottomSheetWith(startDate)
                         .pickMultipleDays(callback)
@@ -414,7 +434,9 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
                             val cc = CivilCalendar()
                             cc.set(year = it.year, month = it.monthNumber-1, dayOfMonth = it.dayOfMonth)
                             cc
-                        })// or pickRangeDays(callback) or pickMultipleDays(callback
+                        })
+                        .maxPossibleDate(endDate)
+                        .minPossibleDate(startDate)// or pickRangeDays(callback) or pickMultipleDays(callback
                     datePicker.build().show(fm, "sometag")
                 }, )
                 {
@@ -692,7 +714,7 @@ fun DaAssignedDutyCard(formatter: DateTimeFormatter, assigneeNames :Pair<String,
 }
 
 @Composable
-fun SettingsPage(activityContext: Activity, viewModel: MainViewModel){
+fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: FragmentManager){
     var value by remember {
         mutableStateOf(viewModel.sharedPrefs.getBoolean("enable_reserve", false))
     }
@@ -700,8 +722,12 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel){
         mutableStateOf(false)
     }
     var coroutineScope = rememberCoroutineScope()
+    val publicHolidays by viewModel.publicHolidaysFlow.collectAsState()
     ProvidePreferenceLocals {
         LazyColumn(Modifier.fillMaxSize()) {
+            item{
+                PreferenceCategory(title = {Text("Duty Planning Options")})
+            }
             item{
                 SwitchPreference(
                     value = value,
@@ -720,7 +746,9 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel){
                     summary = {Text(text = "Reserve planning will show up in both the Results screen and the exported CSV")})
             }
 
-            
+            item{
+                PreferenceCategory(title = {Text("Manage Personnel List")})
+            }
             item{
                 Preference(
                     title = { Text(text = "Export Duty Personnel")},
@@ -729,7 +757,7 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel){
                     onClick = {
                         val file =File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
                         val uri = Uri.fromFile(file)
-                        createFile(activityContext, uri)
+                        createDutyAssistantConfigFile(activityContext, uri)
                     }
                 )
             }
@@ -741,7 +769,68 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel){
                     onClick = {
                         val file =File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
                         val uri = Uri.fromFile(file)
-                        pickFile(activityContext, uri)
+                        importDutyAssistantConfigFile(activityContext, uri)
+                    }
+                )
+            }
+            item{
+                PreferenceCategory(title = {Text("Public Holidays")})
+            }
+            item{
+                val holidaysSetStr = publicHolidays.toString().replace("[", "").replace("]", "")
+                Preference(
+                    title = { Text(text = "Public Holidays Set")},
+                    summary = { Text(text = holidaysSetStr.ifEmpty { "No public holidays set! Try importing the .ics from the MOM website or manually setting it below!" }) },
+                )
+            }
+            item{
+                Preference(
+                    title = { Text(text = "Import Public Holidays From .ics")},
+                    icon = { Icon(imageVector = Icons.Default.Email, contentDescription = "Import Duty Assistants") },
+                    summary = { Text(text = "Imports public holidays from an ICS file, you can download it from mom.gov.sg")},
+                    onClick = {
+                        val file =File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
+                        val uri = Uri.fromFile(file)
+                        importPublicHolidaysIcs(activityContext, uri)
+                    }
+                )
+            }
+            item{
+                val callback = MultipleDaysPickCallback { days ->
+                    val dates = days.map { LocalDate(it.year, it.month+1, it.dayOfMonth) }.toMutableList()
+                    coroutineScope.launch {
+                        viewModel.setPublicHolidays(dates)
+                    }
+                }
+                // start on 1st of jan
+                val startDate = CivilCalendar().apply {
+                    date = 1
+                    month = 0
+                    year = viewModel.selectedYear
+                }
+                // end on 31st december
+                val endDate = CivilCalendar().apply {
+                    date =  31
+                    month = 11
+                    year = viewModel.selectedYear
+                }
+                Preference(
+                    title = { Text(text = "Manually Edit/Set Public Holidays")},
+                    icon = { Icon(imageVector = Icons.Default.DateRange, contentDescription = "Import Duty Assistants") },
+                    summary = { Text(text = "Manually set and edit public holidays")},
+                    onClick = {
+                        // pick dates using the excellent datepicker library
+                        startDate.set(year = viewModel.selectedYear, month = 0, dayOfMonth = 1)
+                        val datePicker = PrimeDatePicker.bottomSheetWith(startDate)
+                            .pickMultipleDays(callback)
+                            .initiallyPickedMultipleDays(publicHolidays.map {
+                                val cc = CivilCalendar()
+                                cc.set(year = it.year, month = it.monthNumber-1, dayOfMonth = it.dayOfMonth)
+                                cc
+                            })
+                            .maxPossibleDate(endDate)
+                            .minPossibleDate(startDate)// or pickRangeDays(callback) or pickMultipleDays(callback
+                        datePicker.build().show(fm, "sometag2")
                     }
                 )
             }
@@ -795,7 +884,7 @@ fun FAB(onClick: () -> Unit, navController: NavHostController, viewModel: MainVi
                 onClick = {
                     if(results.value.isEmpty()){
                         coroutineScope.launch(Dispatchers.IO) {
-                            viewModel.planDuty(viewModel.sharedPrefs.getBoolean("enable_reserve", false), viewModel.dutyPlannedResults.value.isEmpty())
+                            viewModel.planDuty(viewModel.sharedPrefs.getBoolean("enable_reserve", false))
                         }
                     }else{
                         showingPlanDutyConfirmationDialog = true
@@ -818,7 +907,7 @@ fun FAB(onClick: () -> Unit, navController: NavHostController, viewModel: MainVi
             onDismissed = { showingPlanDutyConfirmationDialog = false },
             onPositive = {
                 coroutineScope.launch(Dispatchers.IO) {
-                    viewModel.planDuty(viewModel.sharedPrefs.getBoolean("enable_reserve", false), viewModel.dutyPlannedResults.value.isEmpty())
+                    viewModel.planDuty(viewModel.sharedPrefs.getBoolean("enable_reserve", false))
                 }
             }) {
             showingPlanDutyConfirmationDialog = false
@@ -829,7 +918,9 @@ const val CREATE_FILE = 1
 
 const val PICK_FILE = 2
 
-fun createFile(context:Activity, pickerInitialUri: Uri) {
+const val PICK_ICS_FILE = 3
+
+fun createDutyAssistantConfigFile(context:Activity, pickerInitialUri: Uri) {
     val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
         //addCategory(Intent.CATEGORY_OPENABLE)
         type = "text/plain"
@@ -842,7 +933,7 @@ fun createFile(context:Activity, pickerInitialUri: Uri) {
     context.startActivityForResult(intent, CREATE_FILE)
 }
 
-fun pickFile(context: Activity, pickerInitialUri: Uri) {
+fun importDutyAssistantConfigFile(context: Activity, pickerInitialUri: Uri) {
 
     // Choose a directory using the system's file picker.
     val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
@@ -854,4 +945,16 @@ fun pickFile(context: Activity, pickerInitialUri: Uri) {
     }
 
     context.startActivityForResult(intent, PICK_FILE)
+}
+
+fun importPublicHolidaysIcs(context: Activity, pickerInitialUri: Uri){
+    // Choose a directory using the system's file picker.
+    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+        //addCategory(Intent.ACTION_OPEN_DOCUMENT)
+        // Optionally, specify a URI for the directory that should be opened in
+        // the system file picker when it loads.
+        type = "text/calendar"
+        putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri)
+    }
+    context.startActivityForResult(intent, PICK_ICS_FILE)
 }
