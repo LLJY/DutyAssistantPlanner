@@ -169,14 +169,14 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
         }
         _dutyPlannedList = returnList.toList()
         _dutyPlannedList = _dutyPlannedList.sortedBy { it.second }
-        _dutyPlannedResults.emit(displayDutyPersonnel())
         if(isReserve){
             planReserve()
         }
+        _dutyPlannedResults.emit(displayDutyPersonnel())
         savePlannedDuty()
     }
 
-    fun planReserve(){
+    fun planReserve(emit:Boolean = false){
         val results = dutyPlanningMethodByDate(_dutyAssistants, getDaysInMonth(selectedYear,selectedMonth),true, _publicHolidays)
         val returnList: MutableList<Pair<String, LocalDate>> = mutableListOf()
         results.forEach { da ->
@@ -186,6 +186,18 @@ class MainViewModel @Inject constructor(application: Application): AndroidViewMo
         }
         dutyReserveList = dutyReserveList.sortedBy { it.second }
         dutyReserveList = returnList
+        if(emit){
+            viewModelScope.launch {
+                _dutyPlannedResults.emit(displayDutyPersonnel())
+                savePlannedDuty()
+            }
+        }
+    }
+    /// clears the reserve list and re-emits the duty list
+    suspend fun clearReserves(){
+        dutyReserveList = listOf()
+        savePlannedDuty()
+        _dutyPlannedResults.emit(displayDutyPersonnel())
     }
 
     private fun displayDutyPersonnel(): List<DutyResult> {

@@ -763,7 +763,9 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
                             showingPlanReserveDialog = true
                         }
                         if(!it){
-                            viewModel.dutyReserveList = listOf()
+                            coroutineScope.launch {
+                                viewModel.clearReserves()
+                            }
                         }
                     },
                     title = { Text(text = "Enable Reserve Planning") },
@@ -870,7 +872,7 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
                 onDismissed = { showingPlanReserveDialog = false },
                 onPositive = {
                     coroutineScope.launch(Dispatchers.IO) {
-                        viewModel.planReserve()
+                        viewModel.planReserve(true)
                     }
                 }) {
                 showingPlanReserveDialog = false
