@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -483,7 +484,7 @@ fun DutyConstraintsDialog(index: Int, dutyAssistant: DutyAssistant, coroutineSco
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(820.dp)
+                .wrapContentHeight()
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
         ) {
@@ -492,11 +493,11 @@ fun DutyConstraintsDialog(index: Int, dutyAssistant: DutyAssistant, coroutineSco
                     .fillMaxSize()
                     .verticalScroll(enabled = true, state = ScrollState(0)), horizontalAlignment = Alignment.CenterHorizontally) {
                 Constraint.entries.forEach {constraint ->
-                    Row(modifier = Modifier.width(152.dp),verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
+                    Row(modifier = Modifier.fillMaxWidth(),verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         var checked by remember {
                             mutableStateOf(constraint in dutyAssistant.constraints)
                         }
-                        Text(text = constraint.toString(), fontSize = 8.sp, textAlign = TextAlign.Start )
+                        Text(modifier = Modifier.padding(12.dp), text = constraint.toString().replace("_", " "), fontSize = 10.sp, textAlign = TextAlign.Start )
                         Checkbox(checked = checked, onCheckedChange = {
                             checked = !checked
                             if(checked)
@@ -510,7 +511,7 @@ fun DutyConstraintsDialog(index: Int, dutyAssistant: DutyAssistant, coroutineSco
                     Row(Modifier.wrapContentSize()) {
                         OutlinedIconButton(onClick =
                         {
-                             dutyAssistant.persistentPriority -=10
+                             dutyAssistant.persistentPriority -=1
                         },) {
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowDown,
@@ -518,7 +519,7 @@ fun DutyConstraintsDialog(index: Int, dutyAssistant: DutyAssistant, coroutineSco
                             )
                         }
                         OutlinedIconButton(onClick = {
-                            dutyAssistant.persistentPriority +=10
+                            dutyAssistant.persistentPriority +=1
                         }) {
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowUp,
