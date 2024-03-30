@@ -36,9 +36,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Build
@@ -50,8 +47,10 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -64,11 +63,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -119,7 +120,7 @@ import java.time.format.DateTimeFormatter
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
-    val viewModel: MainViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModels()
     private lateinit var navController: NavHostController
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -137,16 +138,25 @@ class MainActivity : AppCompatActivity() {
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     Scaffold(
-                        floatingActionButton = { FAB(onClick = {
-                            showingAddDialog = true
-                        }, navController, viewModel = viewModel) },
+                        floatingActionButton = {
+                            FAB(onClick = {
+                                showingAddDialog = true
+                            }, navController, viewModel = viewModel)
+                        },
                         bottomBar = { BottomNavigationBar(navController = navController) }
-                    ){
-                        NavigationHost(this@MainActivity, this, navController, supportFragmentManager, viewModel)
+                    ) {
+                        NavigationHost(
+                            this@MainActivity,
+                            this,
+                            navController,
+                            supportFragmentManager,
+                            viewModel
+                        )
+                        @Suppress("UNUSED_EXPRESSION")
                         it
                     }
                 }
-                if(showingAddDialog){
+                if (showingAddDialog) {
                     AddEditDutyAssistantDialog(coroutineScope = coroutineScope, viewModel) {
                         showingAddDialog = false
                     }
@@ -156,10 +166,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onActivityResult(
-        requestCode: Int, resultCode: Int, resultData: Intent?) {
+        requestCode: Int, resultCode: Int, resultData: Intent?
+    ) {
         super.onActivityResult(requestCode, resultCode, resultData)
-        when(requestCode){
-            PICK_FILE ->{
+        when (requestCode) {
+            PICK_FILE -> {
                 // file uri
                 lifecycleScope.launch(Dispatchers.IO) {
                     resultData?.data?.let {
@@ -170,9 +181,10 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            CREATE_FILE ->{
+
+            CREATE_FILE -> {
                 // file uri
-                lifecycleScope.launch (Dispatchers.IO){
+                lifecycleScope.launch(Dispatchers.IO) {
                     resultData?.data?.let {
                         val stream = contentResolver.openOutputStream(it)
                         if (stream != null) {
@@ -182,7 +194,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            PICK_ICS_FILE ->{
+
+            PICK_ICS_FILE -> {
                 lifecycleScope.launch(Dispatchers.IO) {
                     resultData?.data?.let {
                         val stream = contentResolver.openInputStream(it)
@@ -197,10 +210,16 @@ class MainActivity : AppCompatActivity() {
 }
 
 @Composable
-fun NavigationHost(activityContext: Activity, context: Context, navController: NavHostController, fm: FragmentManager, viewModel: MainViewModel) {
+fun NavigationHost(
+    activityContext: Activity,
+    context: Context,
+    navController: NavHostController,
+    fm: FragmentManager,
+    viewModel: MainViewModel
+) {
     NavHost(navController, startDestination = BottomNavItemList[0].route) {
         composable(BottomNavItemList[0].route) { HomeScreen(fm, viewModel) }
-        composable(BottomNavItemList[1].route) { ResultsPage(context ,viewModel) }
+        composable(BottomNavItemList[1].route) { ResultsPage(context, viewModel) }
         composable(BottomNavItemList[2].route) { SettingsPage(activityContext, viewModel, fm) }
     }
 }
@@ -209,7 +228,7 @@ fun NavigationHost(activityContext: Activity, context: Context, navController: N
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(fm: FragmentManager, viewModel: MainViewModel) {
-    val recomposeToggleState: MutableState<Boolean> = remember{ mutableStateOf(false)}
+    val recomposeToggleState: MutableState<Boolean> = remember { mutableStateOf(false) }
 
     var expanded: Boolean by remember { mutableStateOf(false) }
     var showingChangeMonthDialog: Boolean by remember { mutableStateOf(false) }
@@ -218,12 +237,12 @@ fun HomeScreen(fm: FragmentManager, viewModel: MainViewModel) {
     val coroutineScope = rememberCoroutineScope()
 
     var loopMonth: Int by remember {
-        mutableStateOf(0)
+        mutableIntStateOf(0)
     }
 
-     //force a recompose for every collect
+    //force a recompose for every collect
     coroutineScope.launch {
-        viewModel.dutyAssistantList.collect{
+        viewModel.dutyAssistantList.collect {
             recomposeToggleState.value = !recomposeToggleState.value
         }
     }
@@ -233,16 +252,28 @@ fun HomeScreen(fm: FragmentManager, viewModel: MainViewModel) {
                 .fillMaxWidth()
                 .wrapContentSize(Alignment.TopEnd)
         ) {
-            Row (verticalAlignment = Alignment.CenterVertically){
-                TextButton(onClick = {expanded = !expanded}, content = {Text("Select Month (Current ${LocalDate(year = viewModel.selectedYear, month = Month.of(viewModel.selectedMonth), dayOfMonth = 1).month})")})
-                if(expanded) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
+                    onClick = { expanded = !expanded },
+                    content = {
+                        Text(
+                            "Select Month (Current ${
+                                LocalDate(
+                                    year = viewModel.selectedYear,
+                                    month = Month.of(viewModel.selectedMonth),
+                                    dayOfMonth = 1
+                                ).month
+                            })"
+                        )
+                    })
+                if (expanded) {
                     IconButton(onClick = { expanded = !expanded }) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowUp,
                             contentDescription = "More"
                         )
                     }
-                }else{
+                } else {
                     IconButton(onClick = { expanded = !expanded }) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
@@ -277,26 +308,37 @@ fun HomeScreen(fm: FragmentManager, viewModel: MainViewModel) {
                     }
 
             }
-            if(showingChangeMonthDialog){
+            if (showingChangeMonthDialog) {
                 ConfirmationDialog(
-                    alertString = "Changing months will reset everyone's unavailable dates! Are you sure you want to change the month to ${Month(loopMonth+1)} ?",
+                    alertString = "Changing months will reset everyone's unavailable dates! Are you sure you want to change the month to ${
+                        Month(
+                            loopMonth + 1
+                        )
+                    } ?",
                     onDismissed = { showingChangeMonthDialog = false },
                     onPositive = {
                         showingChangeMonthDialog = false
                         coroutineScope.launch {
-                        viewModel.changeMonth(loopMonth + 1)
-                    }},
-                    onNegative = {showingChangeMonthDialog = false})
+                            viewModel.changeMonth(loopMonth + 1)
+                        }
+                    },
+                    onNegative = { showingChangeMonthDialog = false })
 
             }
         }
-        Text(text = "Duty Personnel List", modifier = Modifier.padding(start = 8.dp ,8.dp), fontWeight = FontWeight.Bold)
+        Text(
+            text = "Duty Personnel List",
+            modifier = Modifier.padding(start = 8.dp, 8.dp),
+            fontWeight = FontWeight.Bold
+        )
         val formatter = DateTimeFormatter.ofPattern("dd")
-        if(daList.value.isNotEmpty()) {
+        if (daList.value.isNotEmpty()) {
             LaunchedEffect(recomposeToggleState.value) {}
-            LazyColumn(modifier = Modifier
-                .fillMaxHeight()
-                .padding(bottom = 86.dp)) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(bottom = 86.dp)
+            ) {
                 items(daList.value.count()) {
                     val dutyAssistant = daList.value[it]
                     DAItemCard(
@@ -309,15 +351,21 @@ fun HomeScreen(fm: FragmentManager, viewModel: MainViewModel) {
                     )
                 }
                 item {
-                    Box (Modifier.height(84.dp)){
+                    Box(Modifier.height(84.dp)) {
 
                     }
                 }
             }
-        }else{
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
-                Image(painter = painterResource(id = R.drawable.sad_pikachu), contentDescription = "Sad pikachu")
-                Text(text = "Looks like nobody's manning COC at the moment", fontWeight = FontWeight.Bold)
+        } else {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Image(
+                    painter = painterResource(id = R.drawable.sad_pikachu),
+                    contentDescription = "Sad pikachu"
+                )
+                Text(
+                    text = "Looks like nobody's manning COC at the moment",
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
 
@@ -325,12 +373,17 @@ fun HomeScreen(fm: FragmentManager, viewModel: MainViewModel) {
 }
 
 @Composable
-fun ConfirmationDialog(alertString: String, onDismissed: () -> Unit, onPositive: () -> Unit, onNegative: () -> Unit){
+fun ConfirmationDialog(
+    alertString: String,
+    onDismissed: () -> Unit,
+    onPositive: () -> Unit,
+    onNegative: () -> Unit
+) {
     AlertDialog(
         icon = { Icon(Icons.Default.Warning, contentDescription = "Warning") },
         onDismissRequest = { onDismissed() },
         title = { Text("Irreversible Action!") },
-        text = { Text(text = alertString)},
+        text = { Text(text = alertString) },
         confirmButton = {
             TextButton(onClick = {
                 onPositive()
@@ -347,6 +400,7 @@ fun ConfirmationDialog(alertString: String, onDismissed: () -> Unit, onPositive:
 
         )
 }
+
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
     NavigationBar {
@@ -371,10 +425,18 @@ fun BottomNavigationBar(navController: NavHostController) {
         }
     }
 }
+
 // every duty assistant item card, most complex logic of the entire ui lol
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, fm: FragmentManager, viewModel: MainViewModel, modifier: Modifier){
+fun DAItemCard(
+    da: DutyAssistant,
+    dateFormatter: DateTimeFormatter,
+    index: Int,
+    fm: FragmentManager,
+    viewModel: MainViewModel,
+    modifier: Modifier
+) {
     val coroutineScope = rememberCoroutineScope()
     var showingConstraintsDialog by remember {
         mutableStateOf(false)
@@ -385,37 +447,56 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
     var showingEditNameDialog by remember {
         mutableStateOf(false)
     }
-    Card(modifier = modifier
-        .wrapContentSize()
-        .height(76.dp)
-        .padding(start = 8.dp, end = 8.dp, top = 8.dp)
-        .combinedClickable(
-            onLongClick = {
-                showingEditNameDialog = true
-            },
-            onClick = {
+    Card(
+        modifier = modifier
+            .wrapContentSize()
+            .height(76.dp)
+            .padding(start = 8.dp, end = 8.dp, top = 8.dp)
+            .combinedClickable(
+                onLongClick = {
+                    showingEditNameDialog = true
+                },
+                onClick = {
 
-            })) {
-        Row (horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize()){
-            Column(Modifier.fillMaxWidth().weight(1f)) {
+                })
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)) {
                 // add (AM) to mark out those who cannot do duty on weekends
-                val daName = if(Constraint.EXCUSE_STAY_IN in da.constraints) da.name + " (AM)" else da.name
-                Text(text = daName, Modifier.padding(start = 8.dp).basicMarquee(), fontWeight = FontWeight.SemiBold)
-                Text(modifier = Modifier.padding(start = 8.dp).basicMarquee(),
+                val daName =
+                    if (Constraint.EXCUSE_STAY_IN in da.constraints) da.name + " (AM)" else da.name
+                Text(
+                    text = daName,
+                    Modifier
+                        .padding(start = 8.dp)
+                        .basicMarquee(),
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(modifier = Modifier
+                    .padding(start = 8.dp)
+                    .basicMarquee(),
                     // avoid showing dates if there are none, or there are way too many
-                    text = if(da.unableDates.isNotEmpty() && da.unableDates.count() < 10) {
+                    text = if (da.unableDates.isNotEmpty() && da.unableDates.count() < 10) {
                         da.unableDates.map { dateFormatter.format(it.toJavaLocalDate()) }
                             .toString()
                             .replace('[', ' ').replace(']', ' ').trim()
-                        }else if(da.unableDates.count() > 8) {
-                            "Too Many To Show!"
-                        } else{
-                            "No Unavailable Dates"
-                        })
+                    } else if (da.unableDates.count() > 8) {
+                        "Too Many To Show!"
+                    } else {
+                        "No Unavailable Dates"
+                    })
             }
             val selectDateUnit = {
                 val callback = MultipleDaysPickCallback { days ->
-                    da.unableDates = days.map { LocalDate(it.year, it.month+1, it.dayOfMonth) }.toMutableList()
+                    da.unableDates =
+                        days.map { LocalDate(it.year, it.month + 1, it.dayOfMonth) }.toMutableList()
                     coroutineScope.launch {
                         viewModel.modifyDutyAssistant(da, index)
                     }
@@ -426,16 +507,28 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
                     year = viewModel.selectedYear
                 }
                 val endDate = CivilCalendar().apply {
-                    date =  LocalDate(viewModel.selectedYear, viewModel.selectedMonth, 1).month.length((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))
-                    month = viewModel.selectedMonth -1
+                    date = LocalDate(
+                        viewModel.selectedYear,
+                        viewModel.selectedMonth,
+                        1
+                    ).month.length((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))
+                    month = viewModel.selectedMonth - 1
                     year = viewModel.selectedYear
                 }
-                startDate.set(year = viewModel.selectedYear, month = viewModel.selectedMonth-1, dayOfMonth = 1)
+                startDate.set(
+                    year = viewModel.selectedYear,
+                    month = viewModel.selectedMonth - 1,
+                    dayOfMonth = 1
+                )
                 val datePicker = PrimeDatePicker.bottomSheetWith(startDate)
                     .pickMultipleDays(callback)
                     .initiallyPickedMultipleDays(da.unableDates.map {
                         val cc = CivilCalendar()
-                        cc.set(year = it.year, month = it.monthNumber-1, dayOfMonth = it.dayOfMonth)
+                        cc.set(
+                            year = it.year,
+                            month = it.monthNumber - 1,
+                            dayOfMonth = it.dayOfMonth
+                        )
                         cc
                     })
                     .maxPossibleDate(endDate)
@@ -443,34 +536,52 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
                 datePicker.build().show(fm, "sometag")
             }
             // emulate an icon button using a box, so we can make use of longclick
-            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxHeight().weight(0.6f)) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(0.6f)
+            ) {
                 // set unable dates
-                Box(modifier= Modifier.clip(CircleShape).size(42.dp).combinedClickable(onClick = {
-                    selectDateUnit()
-                }, onLongClick = {
-                    da.unableDates = mutableListOf()
-                    coroutineScope.launch {
-                        viewModel.modifyDutyAssistant(da, index)
-                    }
-                }), contentAlignment = Alignment.Center)
+                Box(modifier = Modifier
+                    .clip(CircleShape)
+                    .size(42.dp)
+                    .combinedClickable(onClick = {
+                        selectDateUnit()
+                    }, onLongClick = {
+                        da.unableDates = mutableListOf()
+                        coroutineScope.launch {
+                            viewModel.modifyDutyAssistant(da, index)
+                        }
+                    }), contentAlignment = Alignment.Center)
                 {
-                    if(da.unableDates.isNotEmpty())
-                        Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Unavailable Dates", tint = Color.Blue)
+                    if (da.unableDates.isNotEmpty())
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Select Unavailable Dates",
+                            tint = Color.Blue
+                        )
                     else
-                        Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Unavailable Dates")
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Select Unavailable Dates"
+                        )
                 }
                 // set person preferences and constraints i.e ex stay in
-                IconButton(onClick =
+                IconButton(
+                    onClick =
+                    {
+                        showingConstraintsDialog = true
+                    },
+                )
                 {
-                    showingConstraintsDialog = true
-                    }, )
-                {
-                    if(da.constraints.isEmpty()) {
+                    if (da.constraints.isEmpty()) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Set Person Constraints and Preferences"
                         )
-                    }else{
+                    } else {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Set Person Constraints and Preferences",
@@ -478,29 +589,35 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
                         )
                     }
                 }
-                IconButton(onClick =
-                {
-                    showingDeletionConfirmationDialog = true
+                IconButton(
+                    onClick =
+                    {
+                        showingDeletionConfirmationDialog = true
 
-                }, )
+                    },
+                )
                 {
-                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Person", tint = Color.Red)
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Person",
+                        tint = Color.Red
+                    )
                 }
             }
         }
-        if(showingDeletionConfirmationDialog){
-            ConfirmationDialog( alertString = "Are you sure you want to delete ${da.name} ?",
+        if (showingDeletionConfirmationDialog) {
+            ConfirmationDialog(alertString = "Are you sure you want to delete ${da.name} ?",
                 onDismissed = { showingDeletionConfirmationDialog = false },
                 onPositive = {
-                coroutineScope.launch {
-                    viewModel.deleteDaFromList(index)
-                }
-            },
+                    coroutineScope.launch {
+                        viewModel.deleteDaFromList(index)
+                    }
+                },
                 onNegative = {
                     showingDeletionConfirmationDialog = false
                 })
         }
-        if(showingConstraintsDialog) {
+        if (showingConstraintsDialog) {
             DutyConstraintsDialog(
                 index = index,
                 dutyAssistant = da,
@@ -510,8 +627,12 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
                     showingConstraintsDialog = false
                 })
         }
-        if(showingEditNameDialog){
-            AddEditDutyAssistantDialog(coroutineScope = coroutineScope, viewModel =viewModel, index = index ) {
+        if (showingEditNameDialog) {
+            AddEditDutyAssistantDialog(
+                coroutineScope = coroutineScope,
+                viewModel = viewModel,
+                index = index
+            ) {
                 showingEditNameDialog = false
             }
         }
@@ -520,14 +641,22 @@ fun DAItemCard(da: DutyAssistant, dateFormatter: DateTimeFormatter, index: Int, 
 
 // dialog to modify DA constraints
 @Composable
-fun DutyConstraintsDialog(index: Int, dutyAssistant: DutyAssistant, coroutineScope: CoroutineScope, onDismissed: () -> Unit, viewModel: MainViewModel){
-    Dialog(onDismissRequest = {
-        coroutineScope.launch {
-            // save changes to the DA
-            viewModel.modifyDutyAssistant(dutyAssistant, index)
-        }
-        onDismissed()
-    },) {
+fun DutyConstraintsDialog(
+    index: Int,
+    dutyAssistant: DutyAssistant,
+    coroutineScope: CoroutineScope,
+    onDismissed: () -> Unit,
+    viewModel: MainViewModel
+) {
+    Dialog(
+        onDismissRequest = {
+            coroutineScope.launch {
+                // save changes to the DA
+                viewModel.modifyDutyAssistant(dutyAssistant, index)
+            }
+            onDismissed()
+        },
+    ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -539,35 +668,51 @@ fun DutyConstraintsDialog(index: Int, dutyAssistant: DutyAssistant, coroutineSco
                 Modifier
                     .fillMaxSize()
                     .verticalScroll(enabled = true, state = rememberScrollState())
-                    .weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Constraint.entries.forEach {constraint ->
-                    Row(modifier = Modifier.fillMaxWidth(),verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    .weight(1f), horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Constraint.entries.forEach { constraint ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         var checked by remember {
                             mutableStateOf(constraint in dutyAssistant.constraints)
                         }
-                        Text(modifier = Modifier.padding(12.dp), text = constraint.toString().replace("_", " "), fontSize = 10.sp, textAlign = TextAlign.Start )
+                        Text(
+                            modifier = Modifier.padding(12.dp),
+                            text = constraint.toString().replace("_", " "),
+                            fontSize = 10.sp,
+                            textAlign = TextAlign.Start
+                        )
                         Checkbox(checked = checked, onCheckedChange = {
                             checked = !checked
-                            if(checked)
+                            if (checked)
                                 dutyAssistant.constraints.add(constraint)
                             else
                                 dutyAssistant.constraints.remove(constraint)
                         })
                     }
                 }
-                Row(modifier = Modifier.width(240.dp),verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    modifier = Modifier.width(240.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Row(Modifier.wrapContentSize()) {
-                        OutlinedIconButton(onClick =
-                        {
-                             dutyAssistant.persistentPriority -=1
-                        },) {
+                        OutlinedIconButton(
+                            onClick =
+                            {
+                                dutyAssistant.persistentPriority -= 1
+                            },
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowDown,
                                 contentDescription = null
                             )
                         }
                         OutlinedIconButton(onClick = {
-                            dutyAssistant.persistentPriority +=1
+                            dutyAssistant.persistentPriority += 1
                         }) {
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowUp,
@@ -576,7 +721,7 @@ fun DutyConstraintsDialog(index: Int, dutyAssistant: DutyAssistant, coroutineSco
                         }
                     }
                     Text(text = "Priority Value: ${dutyAssistant.persistentPriority}")
-                    
+
                 }
             }
 
@@ -585,13 +730,20 @@ fun DutyConstraintsDialog(index: Int, dutyAssistant: DutyAssistant, coroutineSco
 }
 
 @Composable
-fun AddEditDutyAssistantDialog(coroutineScope: CoroutineScope, viewModel: MainViewModel, index: Int? = null, onDismissed: () -> Unit){
+fun AddEditDutyAssistantDialog(
+    coroutineScope: CoroutineScope,
+    viewModel: MainViewModel,
+    index: Int? = null,
+    onDismissed: () -> Unit
+) {
     var name by rememberSaveable {
-        mutableStateOf(if(index != null) viewModel.dutyAssistantList.value[index].name else "")
+        mutableStateOf(if (index != null) viewModel.dutyAssistantList.value[index].name else "")
     }
-    Dialog(onDismissRequest = {
-        onDismissed()
-    },) {
+    Dialog(
+        onDismissRequest = {
+            onDismissed()
+        },
+    ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -599,19 +751,26 @@ fun AddEditDutyAssistantDialog(coroutineScope: CoroutineScope, viewModel: MainVi
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
         ) {
-            Text(modifier = Modifier.padding(top = 16.dp, start = 16.dp), text = if(index != null) "Edit Duty Personnel" else "Add Duty Personnel", fontWeight = FontWeight.Bold)
+            Text(
+                modifier = Modifier.padding(top = 16.dp, start = 16.dp),
+                text = if (index != null) "Edit Duty Personnel" else "Add Duty Personnel",
+                fontWeight = FontWeight.Bold
+            )
             Column(Modifier.wrapContentSize(), verticalArrangement = Arrangement.SpaceAround) {
-                Box(modifier = Modifier
-                    .height(160.dp)
-                    .fillMaxWidth()) {
-                    TextField(modifier= Modifier
-                        .padding(top = 48.dp, start = 16.dp, end = 16.dp)
-                        .fillMaxWidth(),
+                Box(
+                    modifier = Modifier
+                        .height(160.dp)
+                        .fillMaxWidth()
+                ) {
+                    TextField(
+                        modifier = Modifier
+                            .padding(top = 48.dp, start = 16.dp, end = 16.dp)
+                            .fillMaxWidth(),
                         value = name,
                         onValueChange = {
                             name = it
-                      },
-                        placeholder = {Text("Name")},
+                        },
+                        placeholder = { Text("Name") },
                         keyboardOptions = KeyboardOptions.Default.copy(
                             keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Done
@@ -625,20 +784,20 @@ fun AddEditDutyAssistantDialog(coroutineScope: CoroutineScope, viewModel: MainVi
                     )
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton( modifier = Modifier.padding(end = 16.dp), onClick = {
+                    TextButton(modifier = Modifier.padding(end = 16.dp), onClick = {
                         coroutineScope.launch {
                             // save changes to the DA
-                            if(index == null) {
+                            if (index == null) {
                                 viewModel.addDaToList(DutyAssistant(name))
-                            }else{
+                            } else {
                                 viewModel.editDaName(index, name)
                             }
                             onDismissed()
                         }
                     }) {
-                        if(index == null) {
+                        if (index == null) {
                             Text("Add")
-                        }else{
+                        } else {
                             Text("Save")
                         }
                     }
@@ -650,24 +809,35 @@ fun AddEditDutyAssistantDialog(coroutineScope: CoroutineScope, viewModel: MainVi
 }
 
 @Composable
-fun ResultsPage(context: Context, viewModel: MainViewModel){
+fun ResultsPage(context: Context, viewModel: MainViewModel) {
     val dutyResults by viewModel.dutyPlannedResults.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     Column {
-        Row (modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween){
-            Text(text = "Planning Duty For: " +
-                    "${Month(viewModel.selectedMonth)}",
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(
+                text = "Planning Duty For: " +
+                        "${Month(viewModel.selectedMonth)}",
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 12.dp, top = 20.dp))
-            TextButton(modifier=Modifier.padding(end = 8.dp, top = 12.dp).height(32.dp),
+                modifier = Modifier.padding(start = 12.dp, top = 20.dp)
+            )
+            TextButton(
+                modifier = Modifier
+                    .padding(end = 8.dp, top = 12.dp)
+                    .height(32.dp),
                 onClick = {
                     coroutineScope.launch(Dispatchers.IO) {
                         val isReserve = viewModel.sharedPrefs.getBoolean("enable_reserve", false)
                         val file = viewModel.createCsvFromDuty(context.filesDir, isReserve)
                         val sendIntent = Intent()
                         sendIntent.action = Intent.ACTION_SEND
-                        sendIntent.putExtra(Intent.EXTRA_STREAM,
-                            FileProvider.getUriForFile(context, context.applicationContext.packageName+".provider", file))
+                        sendIntent.putExtra(
+                            Intent.EXTRA_STREAM,
+                            FileProvider.getUriForFile(
+                                context,
+                                context.applicationContext.packageName + ".provider",
+                                file
+                            )
+                        )
                         sendIntent.type = "text/csv"
 
                         // tell the main thread to launch a new activity
@@ -677,20 +847,26 @@ fun ResultsPage(context: Context, viewModel: MainViewModel){
                     }
 
                 },
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp))
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp)
+            )
             {
-                Row(Modifier.wrapContentSize(), Arrangement.SpaceBetween){
+                Row(Modifier.wrapContentSize(), Arrangement.SpaceBetween) {
                     Icon(imageVector = Icons.Default.Share, contentDescription = null)
-                    Text(text = "Export to CSV", modifier = Modifier.padding(start = 8.dp, top = 2.dp))
+                    Text(
+                        text = "Export to CSV",
+                        modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                    )
                 }
             }
         }
-        if(dutyResults.isNotEmpty()) {
+        if (dutyResults.isNotEmpty()) {
             val formatter = DateTimeFormatter.ofPattern("EEEE, dd/MM")
-            LazyColumn(modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 8.dp, bottom = 86.dp),) {
-                items(dutyResults.size){
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 8.dp, bottom = 86.dp),
+            ) {
+                items(dutyResults.size) {
                     DaAssignedDutyCard(
                         formatter = formatter,
                         assigneeNames = dutyResults[it].assigneeNames,
@@ -699,10 +875,17 @@ fun ResultsPage(context: Context, viewModel: MainViewModel){
                     )
                 }
             }
-        }else{
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
-                Image(painter = painterResource(id = R.drawable.psyduck), contentDescription = "psyduck")
-                Text(modifier = Modifier.padding(top = 260.dp),text = "When you forget to plan duty for next month", fontWeight = FontWeight.Bold)
+        } else {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Image(
+                    painter = painterResource(id = R.drawable.psyduck),
+                    contentDescription = "psyduck"
+                )
+                Text(
+                    modifier = Modifier.padding(top = 260.dp),
+                    text = "When you forget to plan duty for next month",
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
 
@@ -711,128 +894,168 @@ fun ResultsPage(context: Context, viewModel: MainViewModel){
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DaAssignedDutyCard(formatter: DateTimeFormatter, assigneeNames :Pair<String, String?>, reserveName: String?, assigned: LocalDate , modifier: Modifier = Modifier){
-    Card(modifier = modifier
-        .wrapContentSize()
-        .height(76.dp)
-        .padding(start = 8.dp, end = 8.dp, top = 8.dp)){
+fun DaAssignedDutyCard(
+    formatter: DateTimeFormatter,
+    assigneeNames: Pair<String, String?>,
+    reserveName: String?,
+    assigned: LocalDate,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .wrapContentSize()
+            .height(76.dp)
+            .padding(start = 8.dp, end = 8.dp, top = 8.dp)
+    ) {
 
-            Row (modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween){
-                Column(modifier.weight(1f)) {
-                    Text(modifier= Modifier.padding(start = 8.dp), text = formatter.format(assigned.toJavaLocalDate()), fontWeight = FontWeight.Bold)
-                    Row(modifier = Modifier
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier.weight(1f)) {
+                Text(
+                    modifier = Modifier.padding(start = 8.dp),
+                    text = formatter.format(assigned.toJavaLocalDate()),
+                    fontWeight = FontWeight.Bold
+                )
+                Row(
+                    modifier = Modifier
                         .wrapContentSize()
-                        .padding(start = 8.dp)){
-                        val text = if(assigneeNames.second != null) "${assigneeNames.first} / ${assigneeNames.second} (PM)" else assigneeNames.first
-                        Text(modifier= Modifier
-                            .padding(end = 8.dp)
-                            .basicMarquee(), text = text, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-                if(reserveName != null) {
+                        .padding(start = 8.dp)
+                ) {
+                    val text =
+                        if (assigneeNames.second != null) "${assigneeNames.first} / ${assigneeNames.second} (PM)" else assigneeNames.first
                     Text(
                         modifier = Modifier
                             .padding(end = 8.dp)
-                            .weight(1f)
-                            .basicMarquee(),
-                        text = "R: $reserveName",
-                        textAlign = TextAlign.End,
-                        fontWeight = FontWeight.SemiBold,
+                            .basicMarquee(), text = text, fontWeight = FontWeight.SemiBold
                     )
-                }else{
-                    Box{}
                 }
             }
+            if (reserveName != null) {
+                Text(
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .weight(1f)
+                        .basicMarquee(),
+                    text = "R: $reserveName",
+                    textAlign = TextAlign.End,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            } else {
+                Box {}
+            }
+        }
     }
 }
 
 @Composable
-fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: FragmentManager){
+fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: FragmentManager) {
     var value by remember {
         mutableStateOf(viewModel.sharedPrefs.getBoolean("enable_reserve", false))
     }
     var showingPlanReserveDialog by remember {
         mutableStateOf(false)
     }
-    var coroutineScope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
     val publicHolidays by viewModel.publicHolidaysFlow.collectAsState()
     ProvidePreferenceLocals {
         LazyColumn(Modifier.fillMaxSize()) {
-            item{
-                PreferenceCategory(title = {Text("Duty Planning Options")})
+            item {
+                PreferenceCategory(title = { Text("Duty Planning Options") })
             }
-            item{
+            item {
                 SwitchPreference(
                     value = value,
-                    onValueChange ={
+                    onValueChange = {
                         value = it
                         viewModel.sharedPrefs.edit().putBoolean("enable_reserve", it).apply()
                         // prompt if they would like to plan reserve
-                        if(viewModel.dutyReserveList.isEmpty() && it){
+                        if (viewModel.dutyReserveList.isEmpty() && it) {
                             showingPlanReserveDialog = true
                         }
-                        if(!it){
+                        if (!it) {
                             coroutineScope.launch {
                                 viewModel.clearReserves()
                             }
                         }
                     },
                     title = { Text(text = "Enable Reserve Planning") },
-                    summary = {Text(text = "Reserve planning will show up in both the Results screen and the exported CSV")})
+                    summary = { Text(text = "Reserve planning will show up in both the Results screen and the exported CSV") })
             }
 
-            item{
-                PreferenceCategory(title = {Text("Manage Personnel List")})
+            item {
+                PreferenceCategory(title = { Text("Manage Personnel List") })
             }
-            item{
+            item {
                 Preference(
-                    title = { Text(text = "Export Duty Personnel")},
-                    icon = { Icon(imageVector = Icons.Default.Share, contentDescription = "Export Duty Assistants") },
-                    summary = { Text(text = "Exports all the duty assistants and their saved priorities into a JSON file for import")},
+                    title = { Text(text = "Export Duty Personnel") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Export Duty Assistants"
+                        )
+                    },
+                    summary = { Text(text = "Exports all the duty assistants and their saved priorities into a JSON file for import") },
                     onClick = {
-                        val file =File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
+                        val file =
+                            File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
                         val uri = Uri.fromFile(file)
                         createDutyAssistantConfigFile(activityContext, uri)
                     }
                 )
             }
-            item{
+            item {
                 Preference(
-                    title = { Text(text = "Import Duty Personnel")},
-                    icon = { Icon(imageVector = Icons.Default.Add, contentDescription = "Import Duty Assistants") },
-                    summary = { Text(text = "Imports all the duty assistants and their saved priorities into the current application")},
+                    title = { Text(text = "Import Duty Personnel") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Import Duty Assistants"
+                        )
+                    },
+                    summary = { Text(text = "Imports all the duty assistants and their saved priorities into the current application") },
                     onClick = {
-                        val file =File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
+                        val file =
+                            File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
                         val uri = Uri.fromFile(file)
                         importDutyAssistantConfigFile(activityContext, uri)
                     }
                 )
             }
-            item{
-                PreferenceCategory(title = {Text("Public Holidays")})
+            item {
+                PreferenceCategory(title = { Text("Public Holidays") })
             }
-            item{
+            item {
                 val holidaysSetStr = publicHolidays.toString().replace("[", "").replace("]", "")
                 Preference(
-                    title = { Text(text = "Public Holidays Set")},
+                    title = { Text(text = "Public Holidays Set") },
                     summary = { Text(text = holidaysSetStr.ifEmpty { "No public holidays set! Try importing the .ics from the MOM website or manually setting it below!" }) },
                 )
             }
-            item{
+            item {
                 Preference(
-                    title = { Text(text = "Import Public Holidays From .ics")},
-                    icon = { Icon(imageVector = Icons.Default.Email, contentDescription = "Import Duty Assistants") },
-                    summary = { Text(text = "Imports public holidays from an ICS file, you can download it from mom.gov.sg")},
+                    title = { Text(text = "Import Public Holidays From .ics") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Email,
+                            contentDescription = "Import Duty Assistants"
+                        )
+                    },
+                    summary = { Text(text = "Imports public holidays from an ICS file, you can download it from mom.gov.sg") },
                     onClick = {
-                        val file =File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
+                        val file =
+                            File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
                         val uri = Uri.fromFile(file)
                         importPublicHolidaysIcs(activityContext, uri)
                     }
                 )
             }
-            item{
+            item {
                 val callback = MultipleDaysPickCallback { days ->
-                    val dates = days.map { LocalDate(it.year, it.month+1, it.dayOfMonth) }.toMutableList()
+                    val dates =
+                        days.map { LocalDate(it.year, it.month + 1, it.dayOfMonth) }.toMutableList()
                     coroutineScope.launch {
                         viewModel.setPublicHolidays(dates)
                     }
@@ -845,14 +1068,19 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
                 }
                 // end on 31st december
                 val endDate = CivilCalendar().apply {
-                    date =  31
+                    date = 31
                     month = 11
                     year = viewModel.selectedYear
                 }
                 Preference(
-                    title = { Text(text = "Manually Edit/Set Public Holidays")},
-                    icon = { Icon(imageVector = Icons.Default.DateRange, contentDescription = "Import Duty Assistants") },
-                    summary = { Text(text = "Manually set and edit public holidays")},
+                    title = { Text(text = "Manually Edit/Set Public Holidays") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Import Duty Assistants"
+                        )
+                    },
+                    summary = { Text(text = "Manually set and edit public holidays") },
                     onClick = {
                         // pick dates using the excellent datepicker library
                         startDate.set(year = viewModel.selectedYear, month = 0, dayOfMonth = 1)
@@ -860,7 +1088,11 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
                             .pickMultipleDays(callback)
                             .initiallyPickedMultipleDays(publicHolidays.map {
                                 val cc = CivilCalendar()
-                                cc.set(year = it.year, month = it.monthNumber-1, dayOfMonth = it.dayOfMonth)
+                                cc.set(
+                                    year = it.year,
+                                    month = it.monthNumber - 1,
+                                    dayOfMonth = it.dayOfMonth
+                                )
                                 cc
                             })
                             .maxPossibleDate(endDate)
@@ -875,7 +1107,7 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
                 }
             }
         }
-        if(showingPlanReserveDialog){
+        if (showingPlanReserveDialog) {
             ConfirmationDialog(
                 alertString = "You do not currently have reserves planned! This will result in a broken export.csv, would you like to plan reserve?",
                 onDismissed = { showingPlanReserveDialog = false },
@@ -906,37 +1138,45 @@ fun FAB(onClick: () -> Unit, navController: NavHostController, viewModel: MainVi
 //    composable(BottomNavItemList[0].route) { HomeScreen(fm, viewModel) }
 //    composable(BottomNavItemList[1].route) { ResultsPage(viewModel) }
 //    composable(BottomNavItemList[2].route) { Text(text = "") }
-    when (navBackStackEntry?.destination?.route){
-        BottomNavItemList[0].route ->{
+    when (navBackStackEntry?.destination?.route) {
+        BottomNavItemList[0].route -> {
             ExtendedFloatingActionButton(
                 onClick = { onClick() },
                 icon = { Icon(Icons.Filled.Add, "Add duty assistant") },
                 text = { Text(text = "Add Duty Assistant") },
             )
         }
-        BottomNavItemList[1].route ->{
+
+        BottomNavItemList[1].route -> {
             ExtendedFloatingActionButton(
                 onClick = {
-                    if(results.value.isEmpty()){
+                    if (results.value.isEmpty()) {
                         coroutineScope.launch(Dispatchers.IO) {
-                            viewModel.planDuty(viewModel.sharedPrefs.getBoolean("enable_reserve", false))
+                            viewModel.planDuty(
+                                viewModel.sharedPrefs.getBoolean(
+                                    "enable_reserve",
+                                    false
+                                )
+                            )
                         }
-                    }else{
+                    } else {
                         showingPlanDutyConfirmationDialog = true
                     }
-                          },
+                },
                 icon = { Icon(Icons.Filled.Build, "Generate duty list") },
-                text = { Text(text = "Plan Duty!")},
+                text = { Text(text = "Plan Duty!") },
             )
         }
-        BottomNavItemList[2].route ->{
+
+        BottomNavItemList[2].route -> {
 
         }
-        else ->{
+
+        else -> {
 
         }
     }
-    if(showingPlanDutyConfirmationDialog){
+    if (showingPlanDutyConfirmationDialog) {
         ConfirmationDialog(
             alertString = "This will remove all previous duty planning results, are you sure you want to proceed?",
             onDismissed = { showingPlanDutyConfirmationDialog = false },
@@ -949,13 +1189,14 @@ fun FAB(onClick: () -> Unit, navController: NavHostController, viewModel: MainVi
         }
     }
 }
+
 const val CREATE_FILE = 1
 
 const val PICK_FILE = 2
 
 const val PICK_ICS_FILE = 3
 
-fun createDutyAssistantConfigFile(context:Activity, pickerInitialUri: Uri) {
+fun createDutyAssistantConfigFile(context: Activity, pickerInitialUri: Uri) {
     val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
         //addCategory(Intent.CATEGORY_OPENABLE)
         type = "text/plain"
@@ -982,7 +1223,7 @@ fun importDutyAssistantConfigFile(context: Activity, pickerInitialUri: Uri) {
     context.startActivityForResult(intent, PICK_FILE)
 }
 
-fun importPublicHolidaysIcs(context: Activity, pickerInitialUri: Uri){
+fun importPublicHolidaysIcs(context: Activity, pickerInitialUri: Uri) {
     // Choose a directory using the system's file picker.
     val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
         //addCategory(Intent.ACTION_OPEN_DOCUMENT)
