@@ -263,55 +263,6 @@ fun HomeScreen(fm: FragmentManager, viewModel: MainViewModel) {
                         })
 
                     }
-//            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-//                DropdownMenuItem(text = { Text(text = "January") }, onClick = {
-//                    loopMonth = 1
-//                    showingChangeMonthDialog = true
-//                })
-//                DropdownMenuItem(text = { Text(text = "February") }, onClick = {
-//                    loopMonth = 2
-//                    showingChangeMonthDialog = true
-//                })
-//                DropdownMenuItem(text = { Text(text = "March") }, onClick = {
-//                    loopMonth = 3
-//                    showingChangeMonthDialog = true
-//                })
-//                DropdownMenuItem(text = { Text(text = "April") }, onClick = {
-//                    loopMonth = 4
-//                    showingChangeMonthDialog = true
-//                })
-//                DropdownMenuItem(text = { Text(text = "May") }, onClick = {
-//                    loopMonth = 5
-//                    showingChangeMonthDialog = true
-//                })
-//                DropdownMenuItem(text = { Text(text = "June") }, onClick = {
-//                    loopMonth = 6
-//                    showingChangeMonthDialog = true
-//                })
-//                DropdownMenuItem(text = { Text(text = "July") }, onClick = {
-//                    loopMonth = 7
-//                    showingChangeMonthDialog = true
-//                })
-//                DropdownMenuItem(text = { Text(text = "August") }, onClick = {
-//                    loopMonth = 8
-//                    showingChangeMonthDialog = true
-//                })
-//                DropdownMenuItem(text = { Text(text = "September") }, onClick = {
-//                    loopMonth = 9
-//                    showingChangeMonthDialog = true
-//                })
-//                DropdownMenuItem(text = { Text(text = "October") }, onClick = {
-//                    loopMonth = 10
-//                    showingChangeMonthDialog = true
-//                })
-//                DropdownMenuItem(text = { Text(text = "November") }, onClick = {
-//                    loopMonth = 11
-//                    showingChangeMonthDialog = true
-//                })
-//                DropdownMenuItem(text = { Text(text = "December") }, onClick = {
-//                    loopMonth = 12
-//                    showingChangeMonthDialog = true
-//                })
 
             }
             if(showingChangeMonthDialog){
