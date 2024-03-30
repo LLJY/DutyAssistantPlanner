@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -491,7 +492,8 @@ fun DutyConstraintsDialog(index: Int, dutyAssistant: DutyAssistant, coroutineSco
             Column(
                 Modifier
                     .fillMaxSize()
-                    .verticalScroll(enabled = true, state = ScrollState(0)), horizontalAlignment = Alignment.CenterHorizontally) {
+                    .verticalScroll(enabled = true, state = rememberScrollState())
+                    .weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Constraint.entries.forEach {constraint ->
                     Row(modifier = Modifier.fillMaxWidth(),verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         var checked by remember {
