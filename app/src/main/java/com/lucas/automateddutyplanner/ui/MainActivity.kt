@@ -49,6 +49,8 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CardElevation
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -58,6 +60,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -447,7 +450,7 @@ fun DAItemCard(
     var showingEditNameDialog by remember {
         mutableStateOf(false)
     }
-    Card(
+    OutlinedCard(
         modifier = modifier
             .wrapContentSize()
             .height(76.dp)
@@ -458,7 +461,8 @@ fun DAItemCard(
                 },
                 onClick = {
 
-                })
+                }),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -541,6 +545,7 @@ fun DAItemCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxHeight()
+                    .wrapContentSize()
                     .weight(0.6f),
             ) {
                 // set unable dates
@@ -901,11 +906,12 @@ fun DaAssignedDutyCard(
     assigned: LocalDate,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    OutlinedCard(
         modifier = modifier
             .wrapContentSize()
             .height(76.dp)
-            .padding(start = 8.dp, end = 8.dp, top = 8.dp)
+            .padding(start = 8.dp, end = 8.dp, top = 8.dp),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
 
         Row(
