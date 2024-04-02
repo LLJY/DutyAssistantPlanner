@@ -1009,7 +1009,7 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
                             contentDescription = "Export Duty Assistants"
                         )
                     },
-                    summary = { Text(text = "Exports all the duty assistants and their saved priorities into a JSON file for import") },
+                    summary = { Text(text = "Exports all the duty personnel and their saved priorities into a JSON file for import") },
                     onClick = {
                         val file =
                             File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
@@ -1027,7 +1027,7 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
                             contentDescription = "Import Duty Assistants"
                         )
                     },
-                    summary = { Text(text = "Imports all the duty assistants and their saved priorities into the current application") },
+                    summary = { Text(text = "Imports all the duty personnel and their saved priorities into the current application") },
                     onClick = {
                         val file =
                             File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
@@ -1209,7 +1209,7 @@ fun FAB(onClick: () -> Unit, navController: NavHostController, viewModel: MainVi
             ExtendedFloatingActionButton(
                 onClick = { onClick() },
                 icon = { Icon(Icons.Filled.Add, "Add duty assistant") },
-                text = { Text(text = "Add Duty Assistant") },
+                text = { Text(text = "Add Duty Personnel") },
             )
         }
 
