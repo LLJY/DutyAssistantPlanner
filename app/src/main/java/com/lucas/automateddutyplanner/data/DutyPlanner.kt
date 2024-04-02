@@ -176,6 +176,14 @@ fun dutyPlanningMethodByDate(
             // this ensures that it will always plan based on the previous month's priority values.
             it.priority += avgDutiesAMonth * priorityDecreaseOnAssign
             it.tempPriority = it.priority
+
+            // cap excuse stay in folks in a maximum of 40 priority to avoid a runaway priority scenario
+            // for normal personnel on long term absence, we can manually set their priority.
+            if(Constraint.EXCUSE_STAY_IN in it.constraints){
+                if(it.tempPriority >= 40){
+                    it.tempPriority = 40
+                }
+            }
         }
         it
     }
