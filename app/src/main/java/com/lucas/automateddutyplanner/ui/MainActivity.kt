@@ -879,6 +879,12 @@ fun ResultsPage(context: Context, viewModel: MainViewModel) {
                         assigned = dutyResults[it].assigned,
                     )
                 }
+                // to space out the bottom item so the FAB doesn't obscure it
+                item{
+                    Box(Modifier.height(84.dp)) {
+
+                    }
+                }
             }
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
