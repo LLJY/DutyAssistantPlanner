@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.DocumentsContract
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -507,16 +508,12 @@ fun DAItemCard(
                 }
                 val startDate = CivilCalendar().apply {
                     date = 1
-                    month = viewModel.selectedMonth
+                    month = viewModel.selectedMonth - 1
                     year = viewModel.selectedYear
                 }
                 val endDate = CivilCalendar().apply {
-                    date = LocalDate(
-                        viewModel.selectedYear,
-                        viewModel.selectedMonth,
-                        1
-                    ).month.length((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))
-                    month = viewModel.selectedMonth - 1
+                    date = 1
+                    month = viewModel.selectedMonth
                     year = viewModel.selectedYear
                 }
                 startDate.set(
