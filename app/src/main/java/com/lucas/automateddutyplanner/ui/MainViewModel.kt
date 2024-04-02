@@ -209,6 +209,14 @@ class MainViewModel @Inject constructor(application: Application) : AndroidViewM
         _dutyPlannedResults.emit(displayDutyPersonnel())
     }
 
+    suspend fun clearPersonnel() {
+        _dutyAssistants = mutableListOf()
+        _dutyPlannedList = listOf()
+        clearReserves()
+        saveModifiedList()
+        _dutyAssistantList.emit(_dutyAssistants)
+    }
+
     private fun displayDutyPersonnel(): List<DutyResult> {
         val returnList: MutableList<DutyResult> = mutableListOf()
 

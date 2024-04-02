@@ -964,6 +964,12 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
     var showingPlanReserveDialog by remember {
         mutableStateOf(false)
     }
+    var showingDeletePersonnelDialog by remember {
+        mutableStateOf(false)
+    }
+    var showingClearPublicHolidaysDialog by remember {
+        mutableStateOf(false)
+    }
     val coroutineScope = rememberCoroutineScope()
     val publicHolidays by viewModel.publicHolidaysFlow.collectAsState()
     ProvidePreferenceLocals {
@@ -1027,6 +1033,21 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
                             File(activityContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.absolutePath!!)
                         val uri = Uri.fromFile(file)
                         importDutyAssistantConfigFile(activityContext, uri)
+                    }
+                )
+            }
+            item {
+                Preference(
+                    title = { Text(text = "Delete All Duty Personnel") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Import Duty Assistants"
+                        )
+                    },
+                    summary = { Text(text = "Deletes All Duty Personnel") },
+                    onClick = {
+                        showingDeletePersonnelDialog = true
                     }
                 )
             }
@@ -1108,6 +1129,21 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
                 )
             }
             item {
+                Preference(
+                    title = { Text(text = "Clear All Public Holidays") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Import Duty Assistants"
+                        )
+                    },
+                    summary = { Text(text = "Deletes All Set Public Holidays") },
+                    onClick = {
+                        showingClearPublicHolidaysDialog = true
+                    }
+                )
+            }
+            item {
                 Box(Modifier.height(84.dp)) {
 
                 }
@@ -1123,6 +1159,30 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
                     }
                 }) {
                 showingPlanReserveDialog = false
+            }
+        }
+        if (showingDeletePersonnelDialog) {
+            ConfirmationDialog(
+                alertString = "Are you sure you want to delete all personnel? This will reset their priority ranking for future duties!",
+                onDismissed = { showingDeletePersonnelDialog = false },
+                onPositive = {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        viewModel.clearPersonnel()
+                    }
+                }) {
+                showingDeletePersonnelDialog = false
+            }
+        }
+        if (showingClearPublicHolidaysDialog) {
+            ConfirmationDialog(
+                alertString = "Are you sure you want to clear public holidays?",
+                onDismissed = { showingClearPublicHolidaysDialog = false },
+                onPositive = {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        viewModel.setPublicHolidays(listOf())
+                    }
+                }) {
+                showingClearPublicHolidaysDialog = false
             }
         }
     }
