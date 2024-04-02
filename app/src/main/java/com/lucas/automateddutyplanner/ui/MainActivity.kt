@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
@@ -1143,6 +1144,22 @@ fun SettingsPage(activityContext: Activity, viewModel: MainViewModel, fm: Fragme
                     summary = { Text(text = "Deletes All Set Public Holidays") },
                     onClick = {
                         showingClearPublicHolidaysDialog = true
+                    }
+                )
+            }
+            item{
+                Preference(
+                    title = { Text(text = "About The Developer") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Import Duty Assistants"
+                        )
+                    },
+                    summary = { Text(text = "Developed by Lucas Lee Jing Yi from CTAB.\nWant access to the repo? Don't be afraid to reach out!\n" +
+                            "Copyright © 2024 Lucas Lee Jing Yi.") },
+                    onClick = {
+                        activityContext.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/LLJY/")))
                     }
                 )
             }
